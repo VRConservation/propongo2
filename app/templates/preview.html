@@ -52,30 +52,30 @@
                     {% for item in budget_items %}
                     <tr>
                         <td>{{ item.name }}</td>
-                        <td class="num-col">{{ "%.2f"|format(item.cost_per_unit) }}</td>
+                        <td class="num-col">{{ item.cost_per_unit|currency }}</td>
                         <td class="num-col">{{ item.units }}</td>
-                        <td class="num-col">{{ "%.2f"|format(item.cost_per_unit * item.units) }}</td>
+                        <td class="num-col">{{ (item.cost_per_unit * item.units)|currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr>
                         <td colspan="3"><strong>Subtotal</strong></td>
-                        <td class="num-col"><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                        <td class="num-col"><strong>${{ total_budget|currency }}</strong></td>
                     </tr>
                     {% if indirect_percent is defined and indirect_percent > 0 %}
                     <tr>
                         <td colspan="3">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
-                        <td class="num-col">{{ "%.2f"|format(indirect_amount) }}</td>
+                        <td class="num-col">{{ indirect_amount|currency }}</td>
                     </tr>
                     <tr class="total-row">
                         <td colspan="3"><strong>Total</strong></td>
-                        <td class="num-col"><strong>${{ "%.2f"|format(total_with_indirect) }}</strong></td>
+                        <td class="num-col"><strong>${{ total_with_indirect|currency }}</strong></td>
                     </tr>
                     {% else %}
                     <tr class="total-row">
                         <td colspan="3"><strong>Total</strong></td>
-                        <td class="num-col"><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                        <td class="num-col"><strong>${{ total_budget|currency }}</strong></td>
                     </tr>
                     {% endif %}
                 </tfoot>

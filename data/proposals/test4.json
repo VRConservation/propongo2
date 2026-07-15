@@ -1,0 +1,54 @@
+{
+  "id": "test4",
+  "title": "Untitled Proposal",
+  "client_name": "",
+  "created_at": "2026-07-15T17:21:28.661216",
+  "updated_at": "2026-07-15T17:21:28.661507",
+  "project_summary": "",
+  "tasks": [
+    {
+      "id": "eb1e1e85",
+      "lead_entity": "",
+      "start_month": 7,
+      "start_year": 2026,
+      "duration_months": 1
+    },
+    {
+      "id": "2393d73a",
+      "lead_entity": "",
+      "start_month": 9,
+      "start_year": 2026,
+      "duration_months": 4
+    },
+    {
+      "id": "eee8eaa1",
+      "lead_entity": "",
+      "start_month": 11,
+      "start_year": 2026,
+      "duration_months": 1
+    }
+  ],
+  "qualifications": "",
+  "budget_items": [],
+  "budget_item_timings": {
+    "13b45f88": {
+      "start_month": 7,
+      "start_year": 2026,
+      "duration_months": 1
+    },
+    "8815b6fe": {
+      "start_month": 9,
+      "start_year": 2026,
+      "duration_months": 1
+    },
+    "04d4a7fc": {
+      "start_month": 11,
+      "start_year": 2026,
+      "duration_months": 1
+    }
+  },
+  "start_date": "2026-07-01",
+  "indirect_percent": 0.0,
+  "timeline_use_days": false,
+  "timeline_show_budget": true
+}

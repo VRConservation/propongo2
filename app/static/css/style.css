@@ -235,6 +235,7 @@ body {
 
 .tab-content.preview-mode {
     max-width: 100%;
+    padding: 24px 40px;
 }
 
 .section h2 {
@@ -955,6 +956,18 @@ textarea {
     font-size: 13px;
     font-weight: 500;
     padding-right: 12px;
+}
+
+.gantt-row-label-budget {
+    padding-left: 24px;
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.gantt-bar-budget {
+    background: var(--text-muted);
+    opacity: 0.6;
 }
 
 .gantt-bar-container {

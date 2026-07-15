@@ -202,30 +202,30 @@
                 {% for item in budget_items %}
                 <tr>
                     <td>{{ item.name }}</td>
-                    <td style="text-align:right">{{ "%.2f"|format(item.cost_per_unit) }}</td>
+                    <td style="text-align:right">{{ item.cost_per_unit|currency }}</td>
                     <td style="text-align:right">{{ item.units }}</td>
-                    <td style="text-align:right">{{ "%.2f"|format(item.cost_per_unit * item.units) }}</td>
+                    <td style="text-align:right">{{ (item.cost_per_unit * item.units)|currency }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="3"><strong>Subtotal</strong></td>
-                    <td style="text-align:right"><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                    <td style="text-align:right"><strong>${{ total_budget|currency }}</strong></td>
                 </tr>
                 {% if indirect_percent is defined and indirect_percent > 0 %}
                 <tr>
                     <td colspan="3">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
-                    <td style="text-align:right">{{ "%.2f"|format(indirect_amount) }}</td>
+                    <td style="text-align:right">{{ indirect_amount|currency }}</td>
                 </tr>
                 <tr>
                     <td colspan="3"><strong>Total</strong></td>
-                    <td style="text-align:right"><strong>${{ "%.2f"|format(total_with_indirect) }}</strong></td>
+                    <td style="text-align:right"><strong>${{ total_with_indirect|currency }}</strong></td>
                 </tr>
                 {% else %}
                 <tr>
                     <td colspan="3"><strong>Total</strong></td>
-                    <td style="text-align:right"><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                    <td style="text-align:right"><strong>${{ total_budget|currency }}</strong></td>
                 </tr>
                 {% endif %}
             </tfoot>

@@ -17,6 +17,79 @@ function toggleBudgetInTimeline() {
     });
 }
 
+function updateStartDate(proposalId) {
+    const month = document.getElementById('start-month').value;
+    const year = document.getElementById('start-year').value;
+    const startDate = year + '-' + String(month).padStart(2, '0') + '-01';
+
+    fetch('/api/proposal/' + proposalId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_date: startDate })
+    });
+}
+
+let autoSaveTimelineTimer = null;
+
+function autoSaveTimeline(proposalId) {
+    clearTimeout(autoSaveTimelineTimer);
+    autoSaveTimelineTimer = setTimeout(function() {
+        const inputs = document.getElementById('timeline-inputs');
+        if (!inputs) return;
+
+        const useDays = document.getElementById('timeline-use-days')?.checked;
+        const showBudget = document.getElementById('timeline-show-budget')?.checked;
+        const projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
+        const projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
+        const startDate = projectStartYear + '-' + String(projectStartMonth).padStart(2, '0') + '-01';
+
+        const saveTasks = [];
+        const budgetTimings = {};
+
+        inputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(card => {
+            let duration = parseInt(card.querySelector('.duration-months').value) || 1;
+            if (useDays) duration = Math.ceil(duration / 30);
+
+            saveTasks.push({
+                id: card.dataset.taskId,
+                lead_entity: card.querySelector('.lead-entity')?.value || '',
+                start_month: parseInt(card.querySelector('.task-start-month')?.value) || projectStartMonth,
+                start_year: parseInt(card.querySelector('.task-start-year')?.value) || projectStartYear,
+                duration_months: duration
+            });
+
+            if (showBudget) {
+                const subitems = card.nextElementSibling;
+                if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
+                    subitems.querySelectorAll('.budget-timeline-item').forEach(sub => {
+                        let itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
+                        if (useDays) itemDuration = Math.ceil(itemDuration / 30);
+                        budgetTimings[sub.dataset.itemId] = {
+                            start_month: parseInt(sub.querySelector('.item-start-month')?.value) || projectStartMonth,
+                            start_year: parseInt(sub.querySelector('.item-start-year')?.value) || projectStartYear,
+                            duration_months: itemDuration
+                        };
+                    });
+                }
+            }
+        });
+
+        updateStartDate(proposalId);
+
+        fetch('/api/proposal/' + proposalId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tasks: saveTasks,
+                budget_item_timings: budgetTimings,
+                start_date: startDate,
+                timeline_use_days: !!document.getElementById('timeline-use-days')?.checked,
+                timeline_show_budget: !!document.getElementById('timeline-show-budget')?.checked
+            })
+        });
+    }, 500);
+}
+
 function updateTimeline(proposalId) {
     const taskCards = document.querySelectorAll('#timeline-inputs > .timeline-input-card:not(.budget-timeline-item)');
     const showBudget = document.getElementById('timeline-show-budget')?.checked;
@@ -25,6 +98,7 @@ function updateTimeline(proposalId) {
 
     const projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
     const projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
+    const startDate = projectStartYear + '-' + String(projectStartMonth).padStart(2, '0') + '-01';
 
     const tasks = [];
 
@@ -94,7 +168,13 @@ function updateTimeline(proposalId) {
     fetch('/api/proposal/' + proposalId, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks: saveTasks, budget_item_timings: budgetTimings })
+        body: JSON.stringify({
+            tasks: saveTasks,
+            budget_item_timings: budgetTimings,
+            start_date: startDate,
+            timeline_use_days: useDays,
+            timeline_show_budget: showBudget
+        })
     })
     .then(() => renderGantt(tasks));
 }

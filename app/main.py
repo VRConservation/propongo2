@@ -94,6 +94,7 @@ def create_app():
     app.register_blueprint(snippets_bp)
 
     app.jinja_env.filters["md"] = lambda text: Markup(markdown_to_html(text))
+    app.jinja_env.filters["currency"] = lambda value: f"{value:,.2f}"
 
     @app.route("/")
     def index():

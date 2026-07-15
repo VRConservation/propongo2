@@ -7,6 +7,7 @@
                   placeholder="Describe your organization's background, relevant experience, team qualifications, and why you're the right choice for this project..."
                   hx-trigger="keyup changed delay:1000ms, change"
                   hx-put="/api/proposal/{{ proposal.id }}"
+                  hx-encoding="json"
                   hx-vals='{"qualifications": "JS(document.getElementById(\'qualifications-text\').value)"}'>{{ proposal.qualifications }}</textarea>
     </div>
 

@@ -5,7 +5,7 @@
         <label>Project Start</label>
         <div class="start-month-row">
             <select id="start-month"
-                    onchange="updateStartDate('{{ proposal.id }}')">
+                    onchange="autoSaveTimeline('{{ proposal.id }}')">
                 {% set months = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
                 {% set current_month = start_date_month|default(1) %}
                 {% for m in range(1, 13) %}
@@ -13,7 +13,7 @@
                 {% endfor %}
             </select>
             <select id="start-year"
-                    onchange="updateStartDate('{{ proposal.id }}')">
+                    onchange="autoSaveTimeline('{{ proposal.id }}')">
                 {% set current_year = start_date_year|default(2025) %}
                 {% for y in range(2024, 2031) %}
                 <option value="{{ y }}" {{ 'selected' if y == current_year }}>{{ y }}</option>
@@ -26,11 +26,15 @@
     <div class="form-group timeline-controls">
         <div class="timeline-controls-row">
             <label class="toggle-label">
-                <input type="checkbox" id="timeline-use-days" onchange="toggleTimelineUnits()">
+                <input type="checkbox" id="timeline-use-days"
+                       {{ 'checked' if proposal.timeline_use_days }}
+                       onchange="toggleTimelineUnits(); autoSaveTimeline('{{ proposal.id }}')">
                 <span>Show duration in days</span>
             </label>
             <label class="toggle-label">
-                <input type="checkbox" id="timeline-show-budget" onchange="toggleBudgetInTimeline()">
+                <input type="checkbox" id="timeline-show-budget"
+                       {{ 'checked' if proposal.timeline_show_budget }}
+                       onchange="toggleBudgetInTimeline(); autoSaveTimeline('{{ proposal.id }}')">
                 <span>Include budget items</span>
             </label>
         </div>
@@ -49,7 +53,8 @@
                 <div class="timeline-fields">
                     <div class="field-group">
                         <label>Start</label>
-                        <select class="task-start-month" data-task-id="{{ task.id }}">
+                        <select class="task-start-month" data-task-id="{{ task.id }}"
+                                onchange="autoSaveTimeline('{{ proposal.id }}')">
                             {% for m in range(1, 13) %}
                             <option value="{{ m }}" {{ 'selected' if m == task_start_month }}>{{ months[m-1][:3] }}</option>
                             {% endfor %}
@@ -57,7 +62,8 @@
                     </div>
                     <div class="field-group">
                         <label>&nbsp;</label>
-                        <select class="task-start-year" data-task-id="{{ task.id }}">
+                        <select class="task-start-year" data-task-id="{{ task.id }}"
+                                onchange="autoSaveTimeline('{{ proposal.id }}')">
                             {% for y in range(2024, 2031) %}
                             <option value="{{ y }}" {{ 'selected' if y == task_start_year }}>{{ y }}</option>
                             {% endfor %}
@@ -68,12 +74,16 @@
                         <input type="text" min="0" max="24" value="{{ task.lead_entity|default('') }}"
                                class="lead-entity" data-task-id="{{ task.id }}"
                                placeholder="e.g. JS"
-                               style="width:70px;text-align:center;">
+                               style="width:70px;text-align:center;"
+                               onchange="autoSaveTimeline('{{ proposal.id }}')"
+                               onkeyup="autoSaveTimeline('{{ proposal.id }}')">
                     </div>
                     <div class="field-group">
                         <label class="duration-label">Duration (months)</label>
                         <input type="number" min="1" max="60" value="{{ task.duration_months|default(1) }}"
-                               class="duration-months" data-task-id="{{ task.id }}">
+                               class="duration-months" data-task-id="{{ task.id }}"
+                               onchange="autoSaveTimeline('{{ proposal.id }}')"
+                               onkeyup="autoSaveTimeline('{{ proposal.id }}')">
                     </div>
                 </div>
             </div>
@@ -87,7 +97,8 @@
                     <div class="timeline-fields">
                         <div class="field-group">
                             <label>Start</label>
-                            <select class="item-start-month" data-item-id="{{ item.id }}">
+                            <select class="item-start-month" data-item-id="{{ item.id }}"
+                                    onchange="autoSaveTimeline('{{ proposal.id }}')">
                                 {% for m in range(1, 13) %}
                                 <option value="{{ m }}" {{ 'selected' if m == item_start_month }}>{{ months[m-1][:3] }}</option>
                                 {% endfor %}
@@ -95,7 +106,8 @@
                         </div>
                         <div class="field-group">
                             <label>&nbsp;</label>
-                            <select class="item-start-year" data-item-id="{{ item.id }}">
+                            <select class="item-start-year" data-item-id="{{ item.id }}"
+                                    onchange="autoSaveTimeline('{{ proposal.id }}')">
                                 {% for y in range(2024, 2031) %}
                                 <option value="{{ y }}" {{ 'selected' if y == item_start_year }}>{{ y }}</option>
                                 {% endfor %}
@@ -106,12 +118,16 @@
                             <input type="text" value=""
                                    class="lead-entity" data-item-id="{{ item.id }}"
                                    placeholder="e.g. JS"
-                                   style="width:70px;text-align:center;">
+                                   style="width:70px;text-align:center;"
+                                   onchange="autoSaveTimeline('{{ proposal.id }}')"
+                                   onkeyup="autoSaveTimeline('{{ proposal.id }}')">
                         </div>
                         <div class="field-group">
                             <label class="duration-label">Duration (months)</label>
                             <input type="number" min="1" max="60" value="{{ item.duration_months|default(1) }}"
-                                   class="duration-months" data-item-id="{{ item.id }}">
+                                   class="duration-months" data-item-id="{{ item.id }}"
+                                   onchange="autoSaveTimeline('{{ proposal.id }}')"
+                                   onkeyup="autoSaveTimeline('{{ proposal.id }}')">
                         </div>
                     </div>
                 </div>
@@ -136,3 +152,54 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+(function() {
+    var proposalId = '{{ proposal.id }}';
+    var inputs = document.getElementById('timeline-inputs');
+    if (!inputs) return;
+
+    var useDays = document.getElementById('timeline-use-days')?.checked;
+    var showBudget = document.getElementById('timeline-show-budget')?.checked;
+    ganttUseDays = useDays;
+    var projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
+    var projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
+
+    var allTasks = [];
+    inputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(function(card) {
+        var duration = parseInt(card.querySelector('.duration-months').value) || 1;
+        if (useDays) duration = Math.ceil(duration / 30);
+        allTasks.push({
+            id: card.dataset.taskId,
+            name: card.querySelector('.timeline-task-name').textContent,
+            lead_entity: card.querySelector('.lead-entity')?.value || '',
+            start_month: parseInt(card.querySelector('.task-start-month')?.value) || projectStartMonth,
+            start_year: parseInt(card.querySelector('.task-start-year')?.value) || projectStartYear,
+            duration_months: duration
+        });
+        if (showBudget) {
+            var subitems = card.nextElementSibling;
+            if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
+                subitems.style.display = 'block';
+                subitems.querySelectorAll('.budget-timeline-item').forEach(function(sub) {
+                    var itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
+                    if (useDays) itemDuration = Math.ceil(itemDuration / 30);
+                    allTasks.push({
+                        id: sub.dataset.itemId,
+                        name: sub.querySelector('.timeline-task-name').textContent,
+                        lead_entity: sub.querySelector('.lead-entity')?.value || '',
+                        start_month: parseInt(sub.querySelector('.item-start-month')?.value) || projectStartMonth,
+                        start_year: parseInt(sub.querySelector('.item-start-year')?.value) || projectStartYear,
+                        duration_months: itemDuration,
+                        is_budget: true
+                    });
+                });
+            }
+        }
+    });
+
+    if (allTasks.length > 0) {
+        renderGantt(allTasks);
+    }
+})();
+</script>

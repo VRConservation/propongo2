@@ -32,6 +32,7 @@
                            placeholder="Proposal title..."
                            hx-trigger="keyup changed delay:500ms"
                            hx-put="/api/proposal/{{ proposal.id }}"
+                           hx-encoding="json"
                            hx-vals='{"title": "JS(document.getElementById(\'proposal-title\').value)"}'
                            hx-include="[name='client_name']">
                     <input type="hidden" name="client_name" value="{{ proposal.client_name }}">
@@ -42,6 +43,7 @@
                         <div class="hamburger-dropdown hidden" id="hamburger-dropdown">
                             <a class="hamburger-item" href="/">Switch Proposal</a>
                             <a class="hamburger-item" href="/new">New Proposal</a>
+                            <button class="hamburger-item" onclick="openSaveAsModal(); closeHamburger()">Save As...</button>
                             <hr class="hamburger-divider">
                             <button class="hamburger-item hamburger-theme-btn" onclick="toggleDarkMode()" id="dark-mode-toggle">
                                 <span id="dark-mode-label">Dark Mode: Off</span>

@@ -32,6 +32,48 @@ function saveCurrentTabData(proposalId) {
         });
     }
 
+    const timelineInputs = document.getElementById('timeline-inputs');
+    if (timelineInputs) {
+        const useDays = document.getElementById('timeline-use-days')?.checked;
+        const startMonth = parseInt(document.getElementById('start-month')?.value) || 1;
+        const startYear = parseInt(document.getElementById('start-year')?.value) || 2025;
+        data.start_date = startYear + '-' + String(startMonth).padStart(2, '0') + '-01';
+
+        const saveTasks = [];
+        const budgetTimings = {};
+
+        timelineInputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(card => {
+            let duration = parseInt(card.querySelector('.duration-months').value) || 1;
+            if (useDays) duration = Math.ceil(duration / 30);
+
+            saveTasks.push({
+                id: card.dataset.taskId,
+                lead_entity: card.querySelector('.lead-entity')?.value || '',
+                start_month: parseInt(card.querySelector('.task-start-month')?.value) || startMonth,
+                start_year: parseInt(card.querySelector('.task-start-year')?.value) || startYear,
+                duration_months: duration
+            });
+
+            const subitems = card.nextElementSibling;
+            if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
+                subitems.querySelectorAll('.budget-timeline-item').forEach(sub => {
+                    let itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
+                    if (useDays) itemDuration = Math.ceil(itemDuration / 30);
+                    budgetTimings[sub.dataset.itemId] = {
+                        start_month: parseInt(sub.querySelector('.item-start-month')?.value) || startMonth,
+                        start_year: parseInt(sub.querySelector('.item-start-year')?.value) || startYear,
+                        duration_months: itemDuration
+                    };
+                });
+            }
+        });
+
+        if (saveTasks.length > 0) {
+            data.tasks = saveTasks;
+            data.budget_item_timings = budgetTimings;
+        }
+    }
+
     if (Object.keys(data).length > 0) {
         return fetch('/api/proposal/' + proposalId, {
             method: 'PUT',
@@ -175,7 +217,7 @@ function getUpdatedTasks() {
             description: card.querySelector('.task-desc-input').value,
         });
     });
-    return JSON.stringify(tasks);
+    return tasks;
 }
 
 function openSaveAsModal() {

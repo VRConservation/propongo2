@@ -52,6 +52,8 @@ class Proposal:
     budget_item_timings: dict = field(default_factory=dict)
     start_date: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
     indirect_percent: float = 0.0
+    timeline_use_days: bool = False
+    timeline_show_budget: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -72,8 +74,11 @@ class Proposal:
         filepath = os.path.join(PROPOSALS_DIR, f"{proposal_id}.json")
         if not os.path.exists(filepath):
             return None
-        with open(filepath, "r") as f:
-            return cls.from_dict(json.load(f))
+        try:
+            with open(filepath, "r") as f:
+                return cls.from_dict(json.load(f))
+        except (json.JSONDecodeError, OSError):
+            return None
 
     @classmethod
     def list_all(cls) -> list:
@@ -81,14 +86,17 @@ class Proposal:
         proposals = []
         for filename in sorted(os.listdir(PROPOSALS_DIR)):
             if filename.endswith(".json"):
-                with open(os.path.join(PROPOSALS_DIR, filename), "r") as f:
-                    data = json.load(f)
-                    proposals.append({
-                        "id": data.get("id", filename.replace(".json", "")),
-                        "title": data.get("title", "Untitled"),
-                        "client_name": data.get("client_name", ""),
-                        "updated_at": data.get("updated_at", ""),
-                    })
+                try:
+                    with open(os.path.join(PROPOSALS_DIR, filename), "r") as f:
+                        data = json.load(f)
+                        proposals.append({
+                            "id": data.get("id", filename.replace(".json", "")),
+                            "title": data.get("title", "Untitled"),
+                            "client_name": data.get("client_name", ""),
+                            "updated_at": data.get("updated_at", ""),
+                        })
+                except (json.JSONDecodeError, OSError):
+                    continue
         return sorted(proposals, key=lambda x: x["updated_at"], reverse=True)
 
     @classmethod

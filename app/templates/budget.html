@@ -3,7 +3,7 @@
 
     <div class="budget-summary-bar">
         <span>Total Budget:</span>
-        <span class="budget-total" id="budget-total">${{ "%.2f"|format(total_budget) }}</span>
+        <span class="budget-total" id="budget-total">${{ total_budget|currency }}</span>
     </div>
 
     {% if tasks %}
@@ -31,7 +31,7 @@
                 <div class="budget-task-header">
                     <span class="budget-task-name">{{ task.name }}</span>
                     {% if task.id in task_budgets %}
-                    <span class="budget-task-subtotal" data-task-id="{{ task.id }}">${{ "%.2f"|format(task_budgets[task.id].subtotal) }}</span>
+                    <span class="budget-task-subtotal" data-task-id="{{ task.id }}">${{ task_budgets[task.id].subtotal|currency }}</span>
                     {% else %}
                     <span class="budget-task-subtotal" data-task-id="{{ task.id }}">$0.00</span>
                     {% endif %}
@@ -47,8 +47,8 @@
                         <span class="budget-item-name">{{ item.name }}</span>
                     </div>
                     <div class="budget-item-numbers">
-                        <span>{{ "%.2f"|format(item.cost_per_unit) }}/unit &times; {{ item.units }} units</span>
-                        <span class="budget-item-total">{{ "%.2f"|format(item.cost_per_unit * item.units) }}</span>
+                        <span>{{ item.cost_per_unit|currency }}/unit &times; {{ item.units|currency }} units</span>
+                        <span class="budget-item-total">{{ (item.cost_per_unit * item.units)|currency }}</span>
                     </div>
                     <div class="budget-item-actions">
                         <button class="btn-icon" onclick="editBudgetItem('{{ proposal.id }}', this)" title="Edit">&#9998;</button>
@@ -74,14 +74,14 @@
                    placeholder="0"
                    onchange="updateIndirect('{{ proposal.id }}')"
                    onkeyup="updateIndirect('{{ proposal.id }}')">
-            <span class="indirect-label" id="indirect-label">Indirect ({{ "%.0f"|format(indirect_percent) }}%)</span>
-            <span class="indirect-amount" id="indirect-amount">${{ "%.2f"|format(indirect_amount) }}</span>
+            <span class="indirect-label" id="indirect-label">Indirect ({{ indirect_percent|round|int }}%)</span>
+            <span class="indirect-amount" id="indirect-amount">${{ indirect_amount|currency }}</span>
         </div>
     </div>
 
     <div class="budget-summary-bar budget-total-with-indirect">
         <span>Total:</span>
-        <span class="budget-total budget-total-final" id="budget-total-with-indirect">${{ "%.2f"|format(total_with_indirect) }}</span>
+        <span class="budget-total budget-total-final" id="budget-total-with-indirect">${{ total_with_indirect|currency }}</span>
     </div>
 
     {% else %}
