@@ -10,7 +10,7 @@
 </head>
 <body>
     <div class="app-container">
-        <aside class="sidebar" id="snippet-sidebar">
+        <aside class="sidebar open" id="snippet-sidebar">
             <div class="sidebar-header">
                 <h3>Snippets</h3>
                 <button class="btn-icon" onclick="toggleSidebar()" title="Close sidebar">&times;</button>
@@ -20,7 +20,7 @@
             </div>
         </aside>
 
-        <main class="main-content">
+        <main class="main-content sidebar-open">
             <header class="app-header">
                 <div class="header-left">
                     <button class="btn-icon" onclick="toggleSidebar()" title="Open snippets panel">&#9776;</button>
@@ -37,6 +37,7 @@
                     <input type="hidden" name="client_name" value="{{ proposal.client_name }}">
                 </div>
                 <div class="header-right">
+                    <button class="btn btn-secondary" onclick="openSaveAsModal()">Save As</button>
                     <button class="btn btn-secondary" onclick="loadProposalList()">Proposals</button>
                     <button class="btn btn-secondary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
                     <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'pdf')">Export PDF</button>
@@ -91,7 +92,27 @@
         </div>
     </div>
 
+    <div id="save-as-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Save As</h2>
+                <button class="btn-icon" onclick="closeSaveAsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="save-as-title">Proposal Title</label>
+                    <input type="text" id="save-as-title" placeholder="Enter proposal title..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:14px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSaveAsModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProposalAs()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/budget.js') }}"></script>
     <script src="{{ url_for('static', filename='js/snippets.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

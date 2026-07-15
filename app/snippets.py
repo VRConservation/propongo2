@@ -89,3 +89,47 @@ def delete_snippet(category, snippet_id):
         return jsonify({"ok": True})
 
     return jsonify({"error": "Not found"}), 404
+
+
+@snippets_bp.route("/snippets/import", methods=["POST"])
+def import_snippet():
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    filename = file.filename.lower()
+    title = request.form.get("title", "").strip()
+    if not title:
+        title = os.path.splitext(file.filename)[0]
+
+    try:
+        if filename.endswith(".md") or filename.endswith(".markdown") or filename.endswith(".txt"):
+            content = file.read().decode("utf-8")
+        elif filename.endswith(".docx"):
+            from docx import Document
+            doc = Document(file)
+            content = "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+        else:
+            return jsonify({"error": "Unsupported file type. Use .md, .txt, or .docx"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Failed to read file: {str(e)}"}), 400
+
+    if not content.strip():
+        return jsonify({"error": "File is empty"}), 400
+
+    snippet = {
+        "id": __import__("uuid").uuid4().hex[:8],
+        "title": title,
+        "content": content,
+        "category": "custom",
+    }
+
+    ensure_dirs()
+    filepath = os.path.join(CUSTOM_DIR, f"{snippet['id']}.json")
+    with open(filepath, "w") as f:
+        json.dump(snippet, f, indent=2)
+
+    return jsonify(snippet), 201

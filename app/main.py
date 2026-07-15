@@ -1,4 +1,6 @@
 import json
+import re
+import uuid as _uuid
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from .models import Proposal
 from .export import export_bp
@@ -63,6 +65,39 @@ def create_app():
     def delete_proposal(proposal_id):
         Proposal.delete(proposal_id)
         return jsonify({"ok": True})
+
+    @app.route("/api/proposal/<proposal_id>/save-as", methods=["POST"])
+    def save_proposal_as(proposal_id):
+        data = request.get_json()
+        title = data.get("title", "").strip()
+        if not title:
+            return jsonify({"error": "Title required"}), 400
+
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        new_id = re.sub(r"[^a-z0-9_-]", "_", title.lower())
+        new_id = re.sub(r"_+", "_", new_id).strip("_")
+        if not new_id:
+            new_id = _uuid.uuid4().hex[:8]
+
+        original_id = new_id
+        counter = 1
+        while Proposal.load(new_id):
+            new_id = f"{original_id}_{counter}"
+            counter += 1
+
+        new_proposal = Proposal(id=new_id, title=title)
+        new_proposal.client_name = proposal.client_name
+        new_proposal.project_summary = proposal.project_summary
+        new_proposal.tasks = list(proposal.tasks)
+        new_proposal.qualifications = proposal.qualifications
+        new_proposal.budget_items = list(proposal.budget_items)
+        new_proposal.start_date = proposal.start_date
+        new_proposal.save()
+
+        return jsonify({"id": new_id}), 201
 
     @app.route("/api/proposals", methods=["GET"])
     def list_proposals():

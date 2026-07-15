@@ -116,3 +116,40 @@ function getUpdatedTasks() {
     });
     return JSON.stringify(tasks);
 }
+
+function openSaveAsModal() {
+    const modal = document.getElementById('save-as-modal');
+    const input = document.getElementById('save-as-title');
+    input.value = document.getElementById('proposal-title').value;
+    modal.classList.remove('hidden');
+    input.focus();
+    input.select();
+}
+
+function closeSaveAsModal() {
+    document.getElementById('save-as-modal').classList.add('hidden');
+}
+
+function saveProposalAs() {
+    const title = document.getElementById('save-as-title').value.trim();
+    if (!title) {
+        alert('Please enter a title.');
+        return;
+    }
+
+    const proposalId = window.location.pathname.split('/').pop();
+
+    fetch('/api/proposal/' + proposalId + '/save-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.id) {
+            window.location.href = '/editor/' + data.id;
+        } else {
+            alert(data.error || 'Failed to save.');
+        }
+    });
+}
