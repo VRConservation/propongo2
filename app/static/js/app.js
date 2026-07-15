@@ -64,13 +64,15 @@ function deleteProposal(id) {
 
 function addTask(proposalId) {
     const nameInput = document.getElementById('new-task-name');
+    const descInput = document.getElementById('new-task-desc');
     const name = nameInput.value.trim();
+    const description = descInput ? descInput.value.trim() : '';
     if (!name) return;
 
     fetch('/api/task/' + proposalId, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name })
+        body: JSON.stringify({ name: name, description: description })
     })
     .then(r => r.json())
     .then(task => {
@@ -95,12 +97,14 @@ function addTask(proposalId) {
                       placeholder="Task description..."
                       hx-trigger="keyup changed delay:1000ms, change"
                       hx-put="/api/proposal/${proposalId}"
-                      hx-vals='{"tasks": "JS(getUpdatedTasks())"}'></textarea>
+                      hx-vals='{"tasks": "JS(getUpdatedTasks())"}'>${task.description || ''}</textarea>
         `;
         taskList.appendChild(card);
         htmx.process(card);
         nameInput.value = '';
-        nameInput.focus();
+        if (descInput) descInput.value = '';
+        const newName = card.querySelector('.task-name-input');
+        if (newName) newName.focus();
     });
 }
 

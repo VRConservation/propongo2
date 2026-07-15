@@ -19,12 +19,19 @@ def export_pdf(proposal_id):
     if not proposal:
         return jsonify({"error": "Proposal not found"}), 404
 
+    indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+    indirect_amount = proposal.total_budget * (indirect_percent / 100)
+    total_with_indirect = proposal.total_budget + indirect_amount
+
     html_content = render_template(
         "export_proposal.html",
         proposal=proposal,
         tasks=proposal.tasks,
         budget_items=proposal.budget_items,
         total_budget=proposal.total_budget,
+        indirect_percent=indirect_percent,
+        indirect_amount=indirect_amount,
+        total_with_indirect=total_with_indirect,
     )
 
     ensure_export_dir()
@@ -45,19 +52,26 @@ def export_html(proposal_id):
     if not proposal:
         return jsonify({"error": "Proposal not found"}), 404
 
+    indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+    indirect_amount = proposal.total_budget * (indirect_percent / 100)
+    total_with_indirect = proposal.total_budget + indirect_amount
+
     html_content = render_template(
         "export_proposal.html",
         proposal=proposal,
         tasks=proposal.tasks,
         budget_items=proposal.budget_items,
         total_budget=proposal.total_budget,
+        indirect_percent=indirect_percent,
+        indirect_amount=indirect_amount,
+        total_with_indirect=total_with_indirect,
     )
 
     return Response(
         html_content,
         mimetype="text/html",
         headers={
-            "Content-Disposition": f"attachment; filename={proposal.title or 'proposal'}.html"
+            "Content-Disposition": f"inline; filename={proposal.title or 'proposal'}.html"
         },
     )
 
@@ -68,10 +82,17 @@ def preview(proposal_id):
     if not proposal:
         return jsonify({"error": "Proposal not found"}), 404
 
+    indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+    indirect_amount = proposal.total_budget * (indirect_percent / 100)
+    total_with_indirect = proposal.total_budget + indirect_amount
+
     return render_template(
         "export_proposal.html",
         proposal=proposal,
         tasks=proposal.tasks,
         budget_items=proposal.budget_items,
         total_budget=proposal.total_budget,
+        indirect_percent=indirect_percent,
+        indirect_amount=indirect_amount,
+        total_with_indirect=total_with_indirect,
     )

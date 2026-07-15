@@ -10,6 +10,19 @@
                class="date-input">
     </div>
 
+    <div class="form-group timeline-controls">
+        <div class="timeline-controls-row">
+            <label class="toggle-label">
+                <input type="checkbox" id="timeline-use-days" onchange="toggleTimelineUnits()">
+                <span>Show duration in days</span>
+            </label>
+            <label class="toggle-label">
+                <input type="checkbox" id="timeline-show-budget" onchange="toggleBudgetInTimeline()">
+                <span>Include budget tasks</span>
+            </label>
+        </div>
+    </div>
+
     {% if tasks %}
     <div class="form-group">
         <label>Task Schedule</label>
@@ -19,12 +32,14 @@
                 <div class="timeline-task-name">{{ task.name }}</div>
                 <div class="timeline-fields">
                     <div class="field-group">
-                        <label>Lead (months)</label>
-                        <input type="number" min="0" max="24" value="{{ task.lead_months|default(0) }}"
-                               class="lead-months" data-task-id="{{ task.id }}">
+                        <label>Lead</label>
+                        <input type="text" min="0" max="24" value="{{ task.lead_entity|default('') }}"
+                               class="lead-entity" data-task-id="{{ task.id }}"
+                               placeholder="e.g. JS"
+                               style="width:70px;text-align:center;">
                     </div>
                     <div class="field-group">
-                        <label>Duration (months)</label>
+                        <label class="duration-label">Duration (months)</label>
                         <input type="number" min="1" max="24" value="{{ task.duration_months|default(1) }}"
                                class="duration-months" data-task-id="{{ task.id }}">
                     </div>
@@ -32,6 +47,33 @@
             </div>
             {% endfor %}
         </div>
+
+        <div id="budget-timeline-inputs" style="display:none;">
+            {% for task in tasks %}
+                {% if task.id in task_budgets %}
+                {% for item in task_budgets[task.id]["items"] %}
+                <div class="timeline-input-card budget-timeline-item" data-item-id="{{ item.id }}" data-task-id="{{ task.id }}">
+                    <div class="timeline-task-name budget-task-name-indent">{{ task.name }} &mdash; {{ item.name }}</div>
+                    <div class="timeline-fields">
+                        <div class="field-group">
+                            <label>Lead</label>
+                            <input type="text" value=""
+                                   class="lead-entity" data-item-id="{{ item.id }}"
+                                   placeholder="e.g. JS"
+                                   style="width:70px;text-align:center;">
+                        </div>
+                        <div class="field-group">
+                            <label class="duration-label">Duration (months)</label>
+                            <input type="number" min="1" max="24" value="1"
+                                   class="duration-months" data-item-id="{{ item.id }}">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            {% endfor %}
+        </div>
+
         <button class="btn btn-primary" onclick="updateTimeline('{{ proposal.id }}')">Update Timeline</button>
     </div>
 

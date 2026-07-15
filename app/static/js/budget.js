@@ -1,3 +1,7 @@
+function formatCurrency(num) {
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function addBudgetItem(proposalId) {
     const taskId = document.getElementById('budget-task-select').value;
     const name = document.getElementById('budget-item-name').value.trim();
@@ -40,8 +44,8 @@ function addBudgetItem(proposalId) {
                 <span class="budget-item-name">${item.name}</span>
             </div>
             <div class="budget-item-numbers">
-                <span>$${item.cost_per_unit.toFixed(2)}/unit &times; ${item.units} units</span>
-                <span class="budget-item-total">$${(item.cost_per_unit * item.units).toFixed(2)}</span>
+                <span>$${formatCurrency(item.cost_per_unit)}/unit &times; ${item.units} units</span>
+                <span class="budget-item-total">$${formatCurrency(item.cost_per_unit * item.units)}</span>
             </div>
             <div class="budget-item-actions">
                 <button class="btn-icon" onclick="editBudgetItem('${proposalId}', this)" title="Edit">&#9998;</button>
@@ -162,9 +166,9 @@ function saveBudgetItem(proposalId, btn) {
 
         info.querySelector('.budget-item-name').textContent = data.name;
         numbers.querySelector('span:first-child').innerHTML =
-            `$${data.cost_per_unit.toFixed(2)}/unit &times; ${data.units} units`;
+            `$${formatCurrency(data.cost_per_unit)}/unit &times; ${data.units} units`;
         numbers.querySelector('.budget-item-total').textContent =
-            `$${(data.cost_per_unit * data.units).toFixed(2)}`;
+            `$${formatCurrency(data.cost_per_unit * data.units)}`;
 
         form.remove();
         info.style.display = '';
@@ -225,19 +229,52 @@ function updateBudgetTotal() {
     document.querySelectorAll('.budget-task-group').forEach(group => {
         let subtotal = 0;
         group.querySelectorAll('.budget-item-total').forEach(el => {
-            subtotal += parseFloat(el.textContent.replace('$', '')) || 0;
+            subtotal += parseFloat(el.textContent.replace(/[$,]/g, '')) || 0;
         });
         const subtotalEl = group.querySelector('.budget-task-subtotal');
         if (subtotalEl) {
-            subtotalEl.textContent = '$' + subtotal.toFixed(2);
+            subtotalEl.textContent = '$' + formatCurrency(subtotal);
         }
     });
 
     let total = 0;
     document.querySelectorAll('.budget-item-total').forEach(el => {
-        total += parseFloat(el.textContent.replace('$', '')) || 0;
+        total += parseFloat(el.textContent.replace(/[$,]/g, '')) || 0;
     });
-    document.getElementById('budget-total').textContent = '$' + total.toFixed(2);
+    document.getElementById('budget-total').textContent = '$' + formatCurrency(total);
+
+    const indirectInput = document.getElementById('indirect-percent');
+    const percent = indirectInput ? (parseFloat(indirectInput.value) || 0) : 0;
+    const indirectAmount = total * (percent / 100);
+    const totalWithIndirect = total + indirectAmount;
+
+    const indirectAmountEl = document.getElementById('indirect-amount');
+    if (indirectAmountEl) {
+        indirectAmountEl.textContent = '$' + formatCurrency(indirectAmount);
+    }
+
+    const indirectLabel = document.getElementById('indirect-label');
+    if (indirectLabel) {
+        indirectLabel.textContent = `Indirect (${percent}%)`;
+    }
+
+    const totalWithIndirectEl = document.getElementById('budget-total-with-indirect');
+    if (totalWithIndirectEl) {
+        totalWithIndirectEl.textContent = '$' + formatCurrency(totalWithIndirect);
+    }
+}
+
+function updateIndirect(proposalId) {
+    const percentInput = document.getElementById('indirect-percent');
+    const percent = parseFloat(percentInput.value) || 0;
+
+    fetch('/api/proposal/' + proposalId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ indirect_percent: percent })
+    });
+
+    updateBudgetTotal();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

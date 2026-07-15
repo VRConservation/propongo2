@@ -629,7 +629,9 @@ textarea {
 }
 
 .preview-section-block {
-    margin-bottom: 24px;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
 }
 
 .preview-section-block h2 {
@@ -831,6 +833,65 @@ textarea {
     text-align: center;
     color: var(--text-muted);
     padding: 24px;
+}
+
+/* Indirect costs */
+.indirect-row {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+}
+
+.indirect-input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.indirect-input-row input {
+    width: 80px;
+}
+
+.indirect-label {
+    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.indirect-amount {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.budget-total-with-indirect {
+    margin-top: 12px;
+    background: #f0fdf4;
+    border-color: var(--success);
+}
+
+/* Timeline controls */
+.timeline-controls-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+.budget-task-name-indent {
+    padding-left: 16px;
+    font-style: italic;
 }
 
 /* Snippet loading */

@@ -37,7 +37,7 @@
                     {% endif %}
                 </div>
                 {% if task.id in task_budgets %}
-                {% for item in task_budgets[task.id].items %}
+                {% for item in task_budgets[task.id]["items"] %}
                 <div class="budget-item-card" data-item-id="{{ item.id }}"
                      data-task-id="{{ item.task_id }}"
                      data-name="{{ item.name }}"
@@ -68,6 +68,25 @@
         <p class="empty-text">No budget items yet. Add items above.</p>
         {% endif %}
     </div>
+
+    <div class="form-group indirect-row">
+        <label for="indirect-percent">Indirect Costs (%)</label>
+        <div class="indirect-input-row">
+            <input type="number" id="indirect-percent" min="0" max="100" step="0.1"
+                   value="{{ indirect_percent }}"
+                   placeholder="0"
+                   onchange="updateIndirect('{{ proposal.id }}')"
+                   onkeyup="updateIndirect('{{ proposal.id }}')">
+            <span class="indirect-label" id="indirect-label">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</span>
+            <span class="indirect-amount" id="indirect-amount">${{ "%.2f"|format(indirect_amount) }}</span>
+        </div>
+    </div>
+
+    <div class="budget-summary-bar budget-total-with-indirect">
+        <span>Total with Indirect:</span>
+        <span class="budget-total" id="budget-total-with-indirect">${{ "%.2f"|format(total_with_indirect) }}</span>
+    </div>
+
     {% else %}
     <div class="callout callout-warning">
         <p><strong>No tasks available.</strong> Add tasks in the Scope section first.</p>

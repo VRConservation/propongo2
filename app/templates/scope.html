@@ -5,7 +5,7 @@
         <label for="project-summary">Project Summary</label>
         <textarea id="project-summary" rows="5"
                   placeholder="Describe the project overview, goals, and approach..."
-                  hx-trigger="keyup changed delay:1000ms"
+                  hx-trigger="keyup changed delay:1000ms, change"
                   hx-put="/api/proposal/{{ proposal.id }}"
                   hx-vals='{"project_summary": "JS(document.getElementById(\'project-summary\').value)"}'>{{ proposal.project_summary }}</textarea>
     </div>
@@ -36,10 +36,16 @@
             {% endfor %}
         </div>
 
-        <div class="add-task-form">
-            <input type="text" id="new-task-name" placeholder="New task name..." class="flex-grow">
-            <button class="btn btn-primary"
-                    onclick="addTask('{{ proposal.id }}')">Add Task</button>
+        <div class="add-task-form" style="flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="new-task-name" placeholder="New task name..." class="flex-grow">
+                <textarea id="new-task-desc" rows="2" placeholder="Task description..." class="flex-grow"
+                          style="resize:vertical;"></textarea>
+            </div>
+            <div>
+                <button class="btn btn-primary"
+                        onclick="addTask('{{ proposal.id }}')">Add Task</button>
+            </div>
         </div>
     </div>
 </div>

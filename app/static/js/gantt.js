@@ -1,31 +1,57 @@
+let ganttUseDays = false;
+
+function toggleTimelineUnits() {
+    ganttUseDays = document.getElementById('timeline-use-days').checked;
+    const label = document.querySelectorAll('.duration-label');
+    label.forEach(l => {
+        l.textContent = ganttUseDays ? 'Duration (days)' : 'Duration (months)';
+    });
+}
+
+function toggleBudgetInTimeline() {
+    const show = document.getElementById('timeline-show-budget').checked;
+    const el = document.getElementById('budget-timeline-inputs');
+    if (el) el.style.display = show ? 'block' : 'none';
+}
+
 function updateTimeline(proposalId) {
-    const inputs = document.querySelectorAll('.timeline-input-card');
+    const inputs = document.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)');
+    const showBudget = document.getElementById('timeline-show-budget')?.checked;
+    const useDays = document.getElementById('timeline-use-days')?.checked;
+    ganttUseDays = useDays;
+
     const tasks = [];
 
     inputs.forEach(card => {
         const taskId = card.dataset.taskId;
-        const lead = parseInt(card.querySelector('.lead-months').value) || 0;
-        const duration = parseInt(card.querySelector('.duration-months').value) || 1;
-        tasks.push({ id: taskId, lead_months: lead, duration_months: duration });
+        const leadEntity = card.querySelector('.lead-entity')?.value || '';
+        let duration = parseInt(card.querySelector('.duration-months').value) || 1;
+        if (useDays) duration = Math.ceil(duration / 30);
+        tasks.push({ id: taskId, name: card.querySelector('.timeline-task-name').textContent, lead_entity: leadEntity, lead_months: 0, duration_months: duration });
     });
 
-    // Update proposal with timeline data
-    const proposal = { tasks: [] };
-    inputs.forEach(card => {
-        const taskId = card.dataset.taskId;
-        const nameEl = card.querySelector('.timeline-task-name');
-        proposal.tasks.push({
-            id: taskId,
-            name: nameEl ? nameEl.textContent : '',
-            lead_months: parseInt(card.querySelector('.lead-months').value) || 0,
-            duration_months: parseInt(card.querySelector('.duration-months').value) || 1,
+    if (showBudget) {
+        document.querySelectorAll('.budget-timeline-item').forEach(card => {
+            const itemId = card.dataset.itemId;
+            const taskName = card.querySelector('.timeline-task-name').textContent;
+            const leadEntity = card.querySelector('.lead-entity')?.value || '';
+            let duration = parseInt(card.querySelector('.duration-months').value) || 1;
+            if (useDays) duration = Math.ceil(duration / 30);
+            tasks.push({ id: 'budget_' + itemId, name: taskName, lead_entity: leadEntity, lead_months: 0, duration_months: duration, is_budget: true });
         });
-    });
+    }
+
+    const saveTasks = tasks.map(t => ({
+        id: t.id,
+        lead_entity: t.lead_entity,
+        lead_months: t.lead_months,
+        duration_months: t.duration_months
+    }));
 
     fetch('/api/proposal/' + proposalId, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks: tasks.map(t => ({ id: t.id, lead_months: t.lead_months, duration_months: t.duration_months })) })
+        body: JSON.stringify({ tasks: saveTasks })
     })
     .then(() => renderGantt(tasks));
 }
@@ -42,7 +68,6 @@ function renderGantt(tasks) {
 
     const startDate = new Date(document.getElementById('start-date')?.value || Date.now());
 
-    // Header
     let headerHTML = '<div class="gantt-header"><div class="gantt-label-col">Task</div>';
     for (let i = 0; i < maxMonths; i++) {
         const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
@@ -51,14 +76,14 @@ function renderGantt(tasks) {
     }
     headerHTML += '</div>';
 
-    // Rows
     let rowsHTML = '';
     tasks.forEach(task => {
         const lead = task.lead_months || 0;
         const duration = task.duration_months || 1;
+        const entityLabel = task.lead_entity ? ` (${task.lead_entity})` : '';
 
         rowsHTML += `<div class="gantt-row">
-            <div class="gantt-row-label">${task.name}</div>
+            <div class="gantt-row-label">${task.name}${entityLabel}</div>
             <div class="gantt-bar-container">`;
 
         for (let i = 0; i < maxMonths; i++) {
@@ -66,7 +91,6 @@ function renderGantt(tasks) {
                 rowsHTML += `<div class="gantt-cell" style="min-width:${monthWidth}px">
                     <div class="gantt-bar" style="width:${duration * monthWidth}px"></div>
                 </div>`;
-                // Skip ahead
                 i += duration - 1;
             } else if (i < lead || i >= lead + duration) {
                 rowsHTML += `<div class="gantt-cell" style="min-width:${monthWidth}px"></div>`;

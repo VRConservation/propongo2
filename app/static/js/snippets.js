@@ -87,6 +87,7 @@ function insertSnippet(content) {
         field.selectionStart = field.selectionEnd = start + decoded.length;
         field.focus();
         field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
         showToast('Snippet inserted!');
     } else if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(decoded).then(() => {

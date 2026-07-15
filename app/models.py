@@ -50,6 +50,7 @@ class Proposal:
 
     budget_items: list = field(default_factory=list)
     start_date: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
+    indirect_percent: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)

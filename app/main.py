@@ -54,6 +54,20 @@ def create_app():
         if not proposal:
             proposal = Proposal(id=proposal_id)
 
+        if "tasks" in data:
+            incoming_tasks = data.pop("tasks")
+            existing_by_id = {t.get("id"): t for t in proposal.tasks}
+            merged = []
+            for t in incoming_tasks:
+                tid = t.get("id", "")
+                if tid in existing_by_id:
+                    merged_task = dict(existing_by_id[tid])
+                    merged_task.update(t)
+                else:
+                    merged_task = t
+                merged.append(merged_task)
+            proposal.tasks = merged
+
         for key, value in data.items():
             if hasattr(proposal, key):
                 setattr(proposal, key, value)
@@ -95,6 +109,7 @@ def create_app():
         new_proposal.qualifications = proposal.qualifications
         new_proposal.budget_items = list(proposal.budget_items)
         new_proposal.start_date = proposal.start_date
+        new_proposal.indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
         new_proposal.save()
 
         return jsonify({"id": new_id}), 201
@@ -126,6 +141,10 @@ def create_app():
                 "subtotal": subtotal,
             }
 
+        indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+        indirect_amount = proposal.total_budget * (indirect_percent / 100)
+        total_with_indirect = proposal.total_budget + indirect_amount
+
         return render_template(
             "budget.html",
             proposal=proposal,
@@ -133,6 +152,9 @@ def create_app():
             budget_items=proposal.budget_items,
             total_budget=proposal.total_budget,
             task_budgets=task_budgets,
+            indirect_percent=indirect_percent,
+            indirect_amount=indirect_amount,
+            total_with_indirect=total_with_indirect,
         )
 
     @app.route("/qualifications/<proposal_id>")
@@ -147,11 +169,22 @@ def create_app():
         proposal = Proposal.load(proposal_id)
         if not proposal:
             return jsonify({"error": "Not found"}), 404
+
+        task_budgets = {}
+        for task in proposal.tasks:
+            items = [b for b in proposal.budget_items if b.get("task_id") == task["id"]]
+            if items:
+                task_budgets[task["id"]] = {
+                    "task": task,
+                    "items": items,
+                }
+
         return render_template(
             "timeline.html",
             proposal=proposal,
             tasks=proposal.tasks,
             start_date=proposal.start_date,
+            task_budgets=task_budgets,
         )
 
     @app.route("/preview/<proposal_id>")
@@ -159,12 +192,20 @@ def create_app():
         proposal = Proposal.load(proposal_id)
         if not proposal:
             return jsonify({"error": "Not found"}), 404
+
+        indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+        indirect_amount = proposal.total_budget * (indirect_percent / 100)
+        total_with_indirect = proposal.total_budget + indirect_amount
+
         return render_template(
             "preview.html",
             proposal=proposal,
             tasks=proposal.tasks,
             budget_items=proposal.budget_items,
             total_budget=proposal.total_budget,
+            indirect_percent=indirect_percent,
+            indirect_amount=indirect_amount,
+            total_with_indirect=total_with_indirect,
         )
 
     @app.route("/api/task/<proposal_id>", methods=["POST"])

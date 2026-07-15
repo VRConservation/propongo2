@@ -142,9 +142,24 @@
             </tbody>
             <tfoot>
                 <tr>
+                    <td colspan="3"><strong>Subtotal</strong></td>
+                    <td><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                </tr>
+                {% if indirect_percent is defined and indirect_percent > 0 %}
+                <tr>
+                    <td colspan="3">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
+                    <td>${{ "%.2f"|format(indirect_amount) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><strong>Total</strong></td>
+                    <td><strong>${{ "%.2f"|format(total_with_indirect) }}</strong></td>
+                </tr>
+                {% else %}
+                <tr>
                     <td colspan="3"><strong>Total</strong></td>
                     <td><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
                 </tr>
+                {% endif %}
             </tfoot>
         </table>
     </div>
@@ -164,7 +179,7 @@
             <thead>
                 <tr>
                     <th>Task</th>
-                    <th>Lead Time</th>
+                    <th>Lead</th>
                     <th>Duration</th>
                 </tr>
             </thead>
@@ -172,7 +187,7 @@
                 {% for task in tasks %}
                 <tr>
                     <td>{{ task.name }}</td>
-                    <td>{{ task.lead_months|default(0) }} months</td>
+                    <td>{{ task.lead_entity|default('') }}</td>
                     <td>{{ task.duration_months|default(1) }} months</td>
                 </tr>
                 {% endfor %}
