@@ -23,7 +23,7 @@
         <main class="main-content sidebar-open">
             <header class="app-header">
                 <div class="header-left">
-                    <button class="btn-icon" onclick="toggleSidebar()" title="Open snippets panel">&#9776;</button>
+                    <button class="btn-icon sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle snippets panel" id="sidebar-toggle">&#10094;</button>
                     <h1>Propongo 2</h1>
                 </div>
                 <div class="header-center">
@@ -37,39 +37,33 @@
                     <input type="hidden" name="client_name" value="{{ proposal.client_name }}">
                 </div>
                 <div class="header-right">
-                    <button class="btn btn-secondary" onclick="openSaveAsModal()">Save As</button>
-                    <button class="btn btn-secondary" onclick="loadProposalList()">Proposals</button>
-                    <button class="btn btn-secondary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
-                    <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'pdf')">Export PDF</button>
+                    <div class="hamburger-menu">
+                        <button class="btn-icon hamburger-btn" onclick="toggleHamburgerMenu()" title="Menu">&#9776;</button>
+                        <div class="hamburger-dropdown hidden" id="hamburger-dropdown">
+                            <a class="hamburger-item" href="/">Switch Proposal</a>
+                            <a class="hamburger-item" href="/new">New Proposal</a>
+                            <hr class="hamburger-divider">
+                            <button class="hamburger-item hamburger-theme-btn" onclick="toggleDarkMode()" id="dark-mode-toggle">
+                                <span id="dark-mode-label">Dark Mode: Off</span>
+                            </button>
+                            <hr class="hamburger-divider">
+                            <button class="hamburger-item" onclick="closeHamburger()">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
             <nav class="tab-nav">
                 <button class="tab-btn active" data-tab="scope"
-                        hx-get="/scope/{{ proposal.id }}"
-                        hx-target="#tab-content"
-                        hx-swap="innerHTML"
-                        hx-on::after-request="activateTab(this)">Scope</button>
+                        onclick="switchTab('{{ proposal.id }}', 'scope', this)">Scope</button>
                 <button class="tab-btn" data-tab="budget"
-                        hx-get="/budget/{{ proposal.id }}"
-                        hx-target="#tab-content"
-                        hx-swap="innerHTML"
-                        hx-on::after-request="activateTab(this)">Budget</button>
+                        onclick="switchTab('{{ proposal.id }}', 'budget', this)">Budget</button>
                 <button class="tab-btn" data-tab="qualifications"
-                        hx-get="/qualifications/{{ proposal.id }}"
-                        hx-target="#tab-content"
-                        hx-swap="innerHTML"
-                        hx-on::after-request="activateTab(this)">Qualifications</button>
+                        onclick="switchTab('{{ proposal.id }}', 'qualifications', this)">Qualifications</button>
                 <button class="tab-btn" data-tab="timeline"
-                        hx-get="/timeline/{{ proposal.id }}"
-                        hx-target="#tab-content"
-                        hx-swap="innerHTML"
-                        hx-on::after-request="activateTab(this)">Timeline</button>
+                        onclick="switchTab('{{ proposal.id }}', 'timeline', this)">Timeline</button>
                 <button class="tab-btn" data-tab="preview"
-                        hx-get="/preview/{{ proposal.id }}"
-                        hx-target="#tab-content"
-                        hx-swap="innerHTML"
-                        hx-on::after-request="activateTab(this)">Preview</button>
+                        onclick="switchTab('{{ proposal.id }}', 'preview', this)">Preview</button>
             </nav>
 
             <div id="tab-content" class="tab-content">
@@ -113,6 +107,7 @@
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/budget.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/gantt.js') }}"></script>
     <script src="{{ url_for('static', filename='js/snippets.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

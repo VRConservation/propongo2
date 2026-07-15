@@ -63,6 +63,7 @@
             text-align: left;
             padding: 8px 12px;
             border: 1px solid #ddd;
+            font-variant-numeric: tabular-nums;
         }
         th {
             background-color: #f5f5f5;
@@ -78,6 +79,28 @@
         .task-block h3 {
             margin-bottom: 4px;
         }
+        .section-block h1, .section-block h2, .section-block h3,
+        .section-block h4, .section-block h5, .section-block h6,
+        .task-block h1, .task-block h2, .task-block h3,
+        .task-block h4, .task-block h5, .task-block h6 {
+            margin: 12px 0 6px 0;
+            line-height: 1.3;
+        }
+        .section-block ul, .section-block ol,
+        .task-block ul, .task-block ol {
+            margin: 6px 0 8px 20px;
+            padding: 0;
+        }
+        .section-block li, .task-block li {
+            margin-bottom: 3px;
+        }
+        .section-block code, .task-block code {
+            font-family: monospace;
+            font-size: 9pt;
+            background: #f5f5f5;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
         .footer {
             margin-top: 40px;
             padding-top: 16px;
@@ -85,6 +108,51 @@
             text-align: center;
             font-size: 9pt;
             color: #999;
+        }
+        .timeline-chart {
+            margin-bottom: 16px;
+        }
+        .timeline-chart-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .timeline-chart-label {
+            min-width: 120px;
+            font-size: 9pt;
+            font-weight: 500;
+            padding-right: 10px;
+        }
+        .timeline-chart-bar-track {
+            flex: 1;
+            height: 16px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        .timeline-chart-bar {
+            height: 100%;
+            background: #2563eb;
+            border-radius: 3px;
+            min-width: 3px;
+        }
+        .timeline-chart-dur {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 7pt;
+            font-weight: 600;
+            color: #666;
+        }
+        .timeline-chart-label-indent {
+            padding-left: 24px;
+            font-weight: 400;
+            color: #666;
+        }
+        .timeline-chart-bar-indent {
+            background: #94a3b8;
         }
     </style>
 </head>
@@ -100,7 +168,7 @@
     {% if proposal.project_summary %}
     <div class="section-block">
         <h2>Project Summary</h2>
-        <p>{{ proposal.project_summary }}</p>
+        {{ proposal.project_summary|md }}
     </div>
     {% endif %}
 
@@ -111,7 +179,7 @@
         <div class="task-block">
             <h3>{{ task.name }}</h3>
             {% if task.description %}
-            <p>{{ task.description }}</p>
+            {{ task.description|md }}
             {% endif %}
         </div>
         {% endfor %}
@@ -125,39 +193,39 @@
             <thead>
                 <tr>
                     <th>Item</th>
-                    <th>Cost/Unit</th>
-                    <th>Units</th>
-                    <th>Total</th>
+                    <th style="text-align:right">Cost/Unit</th>
+                    <th style="text-align:right">Units</th>
+                    <th style="text-align:right">Total</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in budget_items %}
                 <tr>
                     <td>{{ item.name }}</td>
-                    <td>${{ "%.2f"|format(item.cost_per_unit) }}</td>
-                    <td>{{ item.units }}</td>
-                    <td>${{ "%.2f"|format(item.cost_per_unit * item.units) }}</td>
+                    <td style="text-align:right">{{ "%.2f"|format(item.cost_per_unit) }}</td>
+                    <td style="text-align:right">{{ item.units }}</td>
+                    <td style="text-align:right">{{ "%.2f"|format(item.cost_per_unit * item.units) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="3"><strong>Subtotal</strong></td>
-                    <td><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                    <td style="text-align:right"><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
                 </tr>
                 {% if indirect_percent is defined and indirect_percent > 0 %}
                 <tr>
                     <td colspan="3">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
-                    <td>${{ "%.2f"|format(indirect_amount) }}</td>
+                    <td style="text-align:right">{{ "%.2f"|format(indirect_amount) }}</td>
                 </tr>
                 <tr>
                     <td colspan="3"><strong>Total</strong></td>
-                    <td><strong>${{ "%.2f"|format(total_with_indirect) }}</strong></td>
+                    <td style="text-align:right"><strong>${{ "%.2f"|format(total_with_indirect) }}</strong></td>
                 </tr>
                 {% else %}
                 <tr>
                     <td colspan="3"><strong>Total</strong></td>
-                    <td><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                    <td style="text-align:right"><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
                 </tr>
                 {% endif %}
             </tfoot>
@@ -168,27 +236,78 @@
     {% if proposal.qualifications %}
     <div class="section-block">
         <h2>Qualifications</h2>
-        <p>{{ proposal.qualifications }}</p>
+        {{ proposal.qualifications|md }}
     </div>
     {% endif %}
 
     {% if tasks %}
     <div class="section-block">
         <h2>Timeline</h2>
+        {% set proj_start_month = proposal.start_date[5:7]|int if proposal.start_date and proposal.start_date|length >= 7 else 1 %}
+        {% set proj_start_year = proposal.start_date[:4]|int if proposal.start_date and proposal.start_date|length >= 4 else 2025 %}
+        {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+
+        {% set all_rows = [] %}
+        {% for task in tasks %}
+            {% set t_sm = task.start_month|default(proj_start_month)|int %}
+            {% set t_sy = task.start_year|default(proj_start_year)|int %}
+            {% set t_offset = (t_sy - proj_start_year) * 12 + (t_sm - proj_start_month) %}
+            {% set t_dur = task.duration_months|default(1)|int %}
+            {% if all_rows.append({'name': task.name, 'offset': t_offset, 'duration': t_dur, 'is_indent': false, 'lead_entity': task.lead_entity|default(''), 'start_month': t_sm, 'start_year': t_sy}) %}{% endif %}
+
+            {% for bi in budget_with_timing %}
+                {% if bi.task_id == task.id %}
+                    {% set bi_sm = bi.start_month|default(t_sm)|int %}
+                    {% set bi_sy = bi.start_year|default(t_sy)|int %}
+                    {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
+                    {% set bi_dur = bi.duration_months|default(1)|int %}
+                    {% if all_rows.append({'name': bi.name, 'offset': bi_offset, 'duration': bi_dur, 'is_indent': true, 'lead_entity': '', 'start_month': bi_sm, 'start_year': bi_sy}) %}{% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+
+        {% set max_end = 0 %}
+        {% for r in all_rows %}
+            {% set row_end = r.offset + r.duration %}
+            {% if row_end > max_end %}{% set max_end = row_end %}{% endif %}
+        {% endfor %}
+        {% set total_project_months = [max_end, 12]|max %}
+
+        <div class="timeline-chart">
+            {% for r in all_rows %}
+            {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
+            {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
+            {% set abs_sm = proj_start_month + r.offset - 1 %}
+            {% set abs_sy = proj_start_year + (abs_sm // 12) %}
+            {% set abs_sm_1based = (abs_sm % 12) + 1 %}
+            <div class="timeline-chart-row">
+                <div class="timeline-chart-label"{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</div>
+                <div class="timeline-chart-bar-track">
+                    <div class="timeline-chart-bar" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
+                    <span class="timeline-chart-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} &middot; {{ r.duration }} mo</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         <table>
             <thead>
                 <tr>
                     <th>Task</th>
                     <th>Lead</th>
+                    <th>Start</th>
                     <th>Duration</th>
                 </tr>
             </thead>
             <tbody>
-                {% for task in tasks %}
+                {% for r in all_rows %}
+                {% set abs_sm = proj_start_month + r.offset - 1 %}
+                {% set abs_sy = proj_start_year + (abs_sm // 12) %}
+                {% set abs_sm_1based = (abs_sm % 12) + 1 %}
                 <tr>
-                    <td>{{ task.name }}</td>
-                    <td>{{ task.lead_entity|default('') }}</td>
-                    <td>{{ task.duration_months|default(1) }} months</td>
+                    <td{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</td>
+                    <td>{{ r.lead_entity }}</td>
+                    <td>{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }}</td>
+                    <td>{{ r.duration }} months</td>
                 </tr>
                 {% endfor %}
             </tbody>

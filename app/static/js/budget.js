@@ -1,5 +1,15 @@
 function formatCurrency(num) {
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function deleteBudgetItem(proposalId, itemId, btn) {
+    if (!confirm('Delete this budget item?')) return;
+    fetch('/api/budget/' + proposalId + '/' + itemId, { method: 'DELETE' })
+        .then(() => {
+            const card = btn.closest('.budget-item-card');
+            if (card) card.remove();
+            checkEmptyGroups();
+        });
 }
 
 function addBudgetItem(proposalId) {
@@ -44,16 +54,13 @@ function addBudgetItem(proposalId) {
                 <span class="budget-item-name">${item.name}</span>
             </div>
             <div class="budget-item-numbers">
-                <span>$${formatCurrency(item.cost_per_unit)}/unit &times; ${item.units} units</span>
-                <span class="budget-item-total">$${formatCurrency(item.cost_per_unit * item.units)}</span>
+                <span>${formatCurrency(item.cost_per_unit)}/unit &times; ${item.units} units</span>
+                <span class="budget-item-total">${formatCurrency(item.cost_per_unit * item.units)}</span>
             </div>
             <div class="budget-item-actions">
                 <button class="btn-icon" onclick="editBudgetItem('${proposalId}', this)" title="Edit">&#9998;</button>
                 <button class="btn-icon btn-danger-icon"
-                        hx-delete="/api/budget/${proposalId}/${item.id}"
-                        hx-target="closest .budget-item-card"
-                        hx-swap="outerHTML"
-                        hx-on::after-request="checkEmptyGroups()">&times;</button>
+                        onclick="deleteBudgetItem('${proposalId}', '${item.id}', this)">&times;</button>
             </div>
         `;
         htmx.process(card);
@@ -66,7 +73,7 @@ function addBudgetItem(proposalId) {
             group.innerHTML = `
                 <div class="budget-task-header">
                     <span class="budget-task-name">${taskName}</span>
-                    <span class="budget-task-subtotal" data-task-id="${taskId}">$0.00</span>
+                    <span class="budget-task-subtotal" data-task-id="${taskId}">$0</span>
                 </div>
             `;
             list.appendChild(group);
@@ -166,9 +173,9 @@ function saveBudgetItem(proposalId, btn) {
 
         info.querySelector('.budget-item-name').textContent = data.name;
         numbers.querySelector('span:first-child').innerHTML =
-            `$${formatCurrency(data.cost_per_unit)}/unit &times; ${data.units} units`;
+            `${formatCurrency(data.cost_per_unit)}/unit &times; ${data.units} units`;
         numbers.querySelector('.budget-item-total').textContent =
-            `$${formatCurrency(data.cost_per_unit * data.units)}`;
+            `${formatCurrency(data.cost_per_unit * data.units)}`;
 
         form.remove();
         info.style.display = '';
@@ -195,7 +202,7 @@ function moveCardToGroup(card, newTaskId, taskName) {
         group.innerHTML = `
             <div class="budget-task-header">
                 <span class="budget-task-name">${taskName}</span>
-                <span class="budget-task-subtotal" data-task-id="${newTaskId}">$0.00</span>
+                <span class="budget-task-subtotal" data-task-id="${newTaskId}">$0</span>
             </div>
         `;
         list.appendChild(group);
@@ -255,7 +262,7 @@ function updateBudgetTotal() {
 
     const indirectLabel = document.getElementById('indirect-label');
     if (indirectLabel) {
-        indirectLabel.textContent = `Indirect (${percent}%)`;
+        indirectLabel.textContent = `Indirect (${Math.round(percent)}%)`;
     }
 
     const totalWithIndirectEl = document.getElementById('budget-total-with-indirect');

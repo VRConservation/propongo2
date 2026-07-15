@@ -47,16 +47,13 @@
                         <span class="budget-item-name">{{ item.name }}</span>
                     </div>
                     <div class="budget-item-numbers">
-                        <span>${{ "%.2f"|format(item.cost_per_unit) }}/unit &times; {{ item.units }} units</span>
-                        <span class="budget-item-total">${{ "%.2f"|format(item.cost_per_unit * item.units) }}</span>
+                        <span>{{ "%.2f"|format(item.cost_per_unit) }}/unit &times; {{ item.units }} units</span>
+                        <span class="budget-item-total">{{ "%.2f"|format(item.cost_per_unit * item.units) }}</span>
                     </div>
                     <div class="budget-item-actions">
                         <button class="btn-icon" onclick="editBudgetItem('{{ proposal.id }}', this)" title="Edit">&#9998;</button>
                         <button class="btn-icon btn-danger-icon"
-                                hx-delete="/api/budget/{{ proposal.id }}/{{ item.id }}"
-                                hx-target="closest .budget-item-card"
-                                hx-swap="outerHTML"
-                                hx-on::after-request="checkEmptyGroups()">&times;</button>
+                                onclick="deleteBudgetItem('{{ proposal.id }}', '{{ item.id }}', this)">&times;</button>
                     </div>
                 </div>
                 {% endfor %}
@@ -72,19 +69,19 @@
     <div class="form-group indirect-row">
         <label for="indirect-percent">Indirect Costs (%)</label>
         <div class="indirect-input-row">
-            <input type="number" id="indirect-percent" min="0" max="100" step="0.1"
+            <input type="number" id="indirect-percent" min="0" max="100" step="1"
                    value="{{ indirect_percent }}"
                    placeholder="0"
                    onchange="updateIndirect('{{ proposal.id }}')"
                    onkeyup="updateIndirect('{{ proposal.id }}')">
-            <span class="indirect-label" id="indirect-label">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</span>
+            <span class="indirect-label" id="indirect-label">Indirect ({{ "%.0f"|format(indirect_percent) }}%)</span>
             <span class="indirect-amount" id="indirect-amount">${{ "%.2f"|format(indirect_amount) }}</span>
         </div>
     </div>
 
     <div class="budget-summary-bar budget-total-with-indirect">
-        <span>Total with Indirect:</span>
-        <span class="budget-total" id="budget-total-with-indirect">${{ "%.2f"|format(total_with_indirect) }}</span>
+        <span>Total:</span>
+        <span class="budget-total budget-total-final" id="budget-total-with-indirect">${{ "%.2f"|format(total_with_indirect) }}</span>
     </div>
 
     {% else %}

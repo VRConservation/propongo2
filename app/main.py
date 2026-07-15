@@ -2,9 +2,88 @@ import json
 import re
 import uuid as _uuid
 from flask import Flask, render_template, request, jsonify, redirect, url_for
+from markupsafe import Markup
 from .models import Proposal
 from .export import export_bp
 from .snippets import snippets_bp
+
+
+def markdown_to_html(text):
+    if not text:
+        return ""
+    lines = text.split("\n")
+    html_lines = []
+    in_list = False
+    in_ol = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        if not stripped:
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            if in_ol:
+                html_lines.append("</ol>")
+                in_ol = False
+            continue
+
+        if stripped.startswith("######"):
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            html_lines.append(f"<h6>{_md_inline(stripped[6:])}</h6>")
+        elif stripped.startswith("#####"):
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            html_lines.append(f"<h5>{_md_inline(stripped[5:])}</h5>")
+        elif stripped.startswith("####"):
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            html_lines.append(f"<h4>{_md_inline(stripped[4:])}</h4>")
+        elif stripped.startswith("###"):
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            html_lines.append(f"<h3>{_md_inline(stripped[3:])}</h3>")
+        elif stripped.startswith("##"):
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            html_lines.append(f"<h2>{_md_inline(stripped[2:])}</h2>")
+        elif stripped.startswith("#"):
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            html_lines.append(f"<h1>{_md_inline(stripped[1:])}</h1>")
+        elif re.match(r"^[-*+]\s+", stripped):
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            if not in_list:
+                html_lines.append("<ul>")
+                in_list = True
+            content = re.sub(r"^[-*+]\s+", "", stripped)
+            html_lines.append(f"<li>{_md_inline(content)}</li>")
+        elif re.match(r"^\d+\.\s+", stripped):
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if not in_ol:
+                html_lines.append("<ol>")
+                in_ol = True
+            content = re.sub(r"^\d+\.\s+", "", stripped)
+            html_lines.append(f"<li>{_md_inline(content)}</li>")
+        else:
+            if in_list: html_lines.append("</ul>"); in_list = False
+            if in_ol: html_lines.append("</ol>"); in_ol = False
+            html_lines.append(f"<p>{_md_inline(stripped)}</p>")
+
+    if in_list:
+        html_lines.append("</ul>")
+    if in_ol:
+        html_lines.append("</ol>")
+
+    return "\n".join(html_lines)
+
+
+def _md_inline(text):
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
+    text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
+    return text
 
 
 def create_app():
@@ -13,6 +92,8 @@ def create_app():
 
     app.register_blueprint(export_bp)
     app.register_blueprint(snippets_bp)
+
+    app.jinja_env.filters["md"] = lambda text: Markup(markdown_to_html(text))
 
     @app.route("/")
     def index():
@@ -179,11 +260,23 @@ def create_app():
                     "items": items,
                 }
 
+        from datetime import datetime as _dt
+        try:
+            sd = _dt.strptime(proposal.start_date, "%Y-%m-%d")
+            start_date_month = sd.month
+            start_date_year = sd.year
+        except (ValueError, TypeError):
+            now = _dt.now()
+            start_date_month = now.month
+            start_date_year = now.year
+
         return render_template(
             "timeline.html",
             proposal=proposal,
             tasks=proposal.tasks,
             start_date=proposal.start_date,
+            start_date_month=start_date_month,
+            start_date_year=start_date_year,
             task_budgets=task_budgets,
         )
 
@@ -197,11 +290,37 @@ def create_app():
         indirect_amount = proposal.total_budget * (indirect_percent / 100)
         total_with_indirect = proposal.total_budget + indirect_amount
 
+        tasks_with_timing = []
+        for t in proposal.tasks:
+            tasks_with_timing.append({
+                "id": t.get("id", ""),
+                "name": t.get("name", ""),
+                "description": t.get("description", ""),
+                "lead_entity": t.get("lead_entity", ""),
+                "start_month": t.get("start_month"),
+                "start_year": t.get("start_year"),
+                "duration_months": t.get("duration_months", 1),
+            })
+
+        budget_with_timing = []
+        timings = proposal.budget_item_timings or {}
+        for item in proposal.budget_items:
+            item_id = item.get("id", "")
+            timing = timings.get(item_id, {})
+            budget_with_timing.append({
+                **item,
+                "start_month": timing.get("start_month"),
+                "start_year": timing.get("start_year"),
+                "duration_months": timing.get("duration_months", 1),
+                "task_id": item.get("task_id", ""),
+            })
+
         return render_template(
             "preview.html",
             proposal=proposal,
-            tasks=proposal.tasks,
+            tasks=tasks_with_timing,
             budget_items=proposal.budget_items,
+            budget_with_timing=budget_with_timing,
             total_budget=proposal.total_budget,
             indirect_percent=indirect_percent,
             indirect_amount=indirect_amount,

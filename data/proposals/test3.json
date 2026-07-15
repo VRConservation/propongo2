@@ -1,0 +1,97 @@
+{
+  "id": "test3",
+  "title": "Test3",
+  "client_name": "",
+  "created_at": "2026-07-15T11:27:05.057685",
+  "updated_at": "2026-07-15T12:25:28.586824",
+  "project_summary": "I'm baby blundstones band tee fashion axe zizek 3 wolf moon fernet freegan drinking vinegar oat milk. DIY offal forage, compost car seat headrest ayahuasca kinfolk claire denis taiyaki burrata. Capitalist realism angela davis hella dirtbag feeld lynch didion aesthetic. Attachment style unicorn farm-to-table edison bulb blundstones claire denis. Crucifix mullet messenger bag tufting fam A24 chambray sustainable buy nothing focaccia.",
+  "tasks": [
+    {
+      "id": "83dc7abf",
+      "name": "Task 1",
+      "description": "I'm baby blundstones band tee fashion axe zizek 3 wolf moon fernet freegan drinking vinegar oat milk. DIY offal forage, compost car seat headrest ayahuasca kinfolk claire denis taiyaki burrata",
+      "lead_months": 0,
+      "duration_months": 15,
+      "lead_entity": "Billy",
+      "start_month": 7,
+      "start_year": 2026
+    },
+    {
+      "id": "beab75f1",
+      "name": "Task 2",
+      "description": "I'm baby blundstones band tee fashion axe zizek 3 wolf moon fernet freegan drinking vinegar oat milk. DIY offal forage, compost car seat headrest ayahuasca kinfolk claire denis taiyaki burrata",
+      "lead_months": 15,
+      "duration_months": 2,
+      "lead_entity": "",
+      "start_month": 10,
+      "start_year": 2026
+    },
+    {
+      "id": "072be972",
+      "name": "Task 3",
+      "description": "I'm baby blundstones band tee fashion axe zizek 3 wolf moon fernet freegan drinking vinegar oat milk. DIY offal forage, compost car seat headrest ayahuasca kinfolk claire denis taiyaki burrata",
+      "lead_months": 33,
+      "duration_months": 60,
+      "lead_entity": "",
+      "start_month": 7,
+      "start_year": 2026
+    },
+    {
+      "id": "afb6b555",
+      "name": "Task 4",
+      "description": "Reporting",
+      "lead_months": 0,
+      "duration_months": 1,
+      "lead_entity": "",
+      "start_month": 7,
+      "start_year": 2026
+    }
+  ],
+  "qualifications": "Small batch ethical fixie, actually echo park meggings before they sold out disrupt. Yr sustainable whatever, artisan microdosing cred activated charcoal. Celiac dreamcatcher four loko, vinyl church-key helvetica sartorial. Gochujang banjo sustainable, food truck kinfolk aesthetic. Woke normcore literally cloud bread, jianbing ethical waistcoat. Hammock shoreditch microdosing, trust fund lo-fi post-ironic. Man braid literally drinking vinegar sustainable, cred lomo keytar.\n\n## Other\n- Pine market has bottomed out. can't sell it. lot of talk about exporting.\n- Clarke, WRTC, joint venture with Jennifer Alger and Farwest wood products they're developing. Aggregation marketing for forest based outputs and small mills. CA wood supply group similar t Sust NW Wood. Website is operational. In Martin's newsletter last week, Callifornia Wood group.\n- Water DB. Give to Blue Forest (working with them on an FRB in Trinity). Beneficiary id is analog. Speak to Jason about it more. Connect as an automation in Planscape?\n\n",
+  "budget_items": [
+    {
+      "id": "c3c5452a",
+      "task_id": "83dc7abf",
+      "name": "Billie's mapps",
+      "cost_per_unit": 600.0,
+      "units": 300.0
+    },
+    {
+      "id": "72b52829",
+      "task_id": "beab75f1",
+      "name": "1. Analysis and meetings",
+      "cost_per_unit": 45.0,
+      "units": 51.0
+    },
+    {
+      "id": "d671c58a",
+      "task_id": "beab75f1",
+      "name": "2. Data",
+      "cost_per_unit": 100.0,
+      "units": 25.0
+    },
+    {
+      "id": "00403902",
+      "task_id": "072be972",
+      "name": "Reporting",
+      "cost_per_unit": 400.0,
+      "units": 50.0
+    },
+    {
+      "id": "d99908c1",
+      "task_id": "072be972",
+      "name": "Mapping",
+      "cost_per_unit": 200.0,
+      "units": 30.0
+    },
+    {
+      "id": "0515f2f3",
+      "task_id": "beab75f1",
+      "name": "intergalactic space pants",
+      "cost_per_unit": 5000.0,
+      "units": 3.0
+    }
+  ],
+  "start_date": "2026-07-15",
+  "indirect_percent": 7
+}
