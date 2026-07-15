@@ -26,24 +26,41 @@
     <div class="form-group">
         <label>Budget Items</label>
         <div id="budget-item-list">
-            {% for item in budget_items %}
-            <div class="budget-item-card" data-item-id="{{ item.id }}">
-                <div class="budget-item-info">
-                    <span class="budget-item-name">{{ item.name }}</span>
-                    <span class="budget-item-task">
-                        {% for task in tasks if task.id == item.task_id %}
-                            {{ task.name }}
-                        {% endfor %}
-                    </span>
+            {% for task in tasks %}
+            <div class="budget-task-group" data-task-id="{{ task.id }}">
+                <div class="budget-task-header">
+                    <span class="budget-task-name">{{ task.name }}</span>
+                    {% if task.id in task_budgets %}
+                    <span class="budget-task-subtotal" data-task-id="{{ task.id }}">${{ "%.2f"|format(task_budgets[task.id].subtotal) }}</span>
+                    {% else %}
+                    <span class="budget-task-subtotal" data-task-id="{{ task.id }}">$0.00</span>
+                    {% endif %}
                 </div>
-                <div class="budget-item-numbers">
-                    <span>${{ "%.2f"|format(item.cost_per_unit) }}/unit &times; {{ item.units }} units</span>
-                    <span class="budget-item-total">${{ "%.2f"|format(item.cost_per_unit * item.units) }}</span>
+                {% if task.id in task_budgets %}
+                {% for item in task_budgets[task.id].items %}
+                <div class="budget-item-card" data-item-id="{{ item.id }}"
+                     data-task-id="{{ item.task_id }}"
+                     data-name="{{ item.name }}"
+                     data-cost="{{ item.cost_per_unit }}"
+                     data-units="{{ item.units }}">
+                    <div class="budget-item-info">
+                        <span class="budget-item-name">{{ item.name }}</span>
+                    </div>
+                    <div class="budget-item-numbers">
+                        <span>${{ "%.2f"|format(item.cost_per_unit) }}/unit &times; {{ item.units }} units</span>
+                        <span class="budget-item-total">${{ "%.2f"|format(item.cost_per_unit * item.units) }}</span>
+                    </div>
+                    <div class="budget-item-actions">
+                        <button class="btn-icon" onclick="editBudgetItem('{{ proposal.id }}', this)" title="Edit">&#9998;</button>
+                        <button class="btn-icon btn-danger-icon"
+                                hx-delete="/api/budget/{{ proposal.id }}/{{ item.id }}"
+                                hx-target="closest .budget-item-card"
+                                hx-swap="outerHTML"
+                                hx-on::after-request="checkEmptyGroups()">&times;</button>
+                    </div>
                 </div>
-                <button class="btn-icon btn-danger-icon"
-                        hx-delete="/api/budget/{{ proposal.id }}/{{ item.id }}"
-                        hx-target="closest .budget-item-card"
-                        hx-swap="outerHTML">&times;</button>
+                {% endfor %}
+                {% endif %}
             </div>
             {% endfor %}
         </div>

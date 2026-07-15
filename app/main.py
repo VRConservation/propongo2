@@ -80,12 +80,24 @@ def create_app():
         proposal = Proposal.load(proposal_id)
         if not proposal:
             return jsonify({"error": "Not found"}), 404
+
+        task_budgets = {}
+        for task in proposal.tasks:
+            items = [b for b in proposal.budget_items if b.get("task_id") == task["id"]]
+            subtotal = sum(i.get("cost_per_unit", 0) * i.get("units", 0) for i in items)
+            task_budgets[task["id"]] = {
+                "task": task,
+                "items": items,
+                "subtotal": subtotal,
+            }
+
         return render_template(
             "budget.html",
             proposal=proposal,
             tasks=proposal.tasks,
             budget_items=proposal.budget_items,
             total_budget=proposal.total_budget,
+            task_budgets=task_budgets,
         )
 
     @app.route("/qualifications/<proposal_id>")
@@ -174,6 +186,29 @@ def create_app():
             return jsonify({"error": "Not found"}), 404
 
         proposal.budget_items = [b for b in proposal.budget_items if b.get("id") != item_id]
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/budget/<proposal_id>/<item_id>", methods=["PUT"])
+    def update_budget_item(proposal_id, item_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data"}), 400
+
+        for item in proposal.budget_items:
+            if item.get("id") == item_id:
+                item["task_id"] = data.get("task_id", item.get("task_id", ""))
+                item["name"] = data.get("name", item.get("name", ""))
+                item["cost_per_unit"] = float(data.get("cost_per_unit", item.get("cost_per_unit", 0)))
+                item["units"] = float(data.get("units", item.get("units", 1)))
+                break
+        else:
+            return jsonify({"error": "Item not found"}), 404
+
         proposal.save()
         return jsonify({"ok": True})
 

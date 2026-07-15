@@ -462,6 +462,78 @@ textarea {
     margin-left: 12px;
 }
 
+.budget-task-group {
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.budget-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+}
+
+.budget-task-name {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.budget-task-subtotal {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--success);
+}
+
+.budget-task-group .budget-item-card {
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.budget-task-group .budget-item-card:last-child {
+    border-bottom: none;
+}
+
+.budget-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 8px;
+}
+
+.budget-item-edit-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.budget-item-edit-form input,
+.budget-item-edit-form select {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.budget-item-edit-form .flex-grow {
+    flex: 1;
+}
+
+.budget-item-edit-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 8px;
+}
+
 .timeline-input-card {
     display: flex;
     align-items: center;

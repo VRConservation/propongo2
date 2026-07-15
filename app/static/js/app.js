@@ -82,7 +82,7 @@ function addTask(proposalId) {
             <div class="task-header">
                 <input type="text" class="task-name-input" value="${task.name}"
                        placeholder="Task name"
-                       hx-trigger="keyup changed delay:500ms"
+                       hx-trigger="keyup changed delay:500ms, change"
                        hx-put="/api/proposal/${proposalId}"
                        hx-vals='{"tasks": "JS(getUpdatedTasks())"}'>
                 <button class="btn-icon btn-danger-icon"
@@ -93,7 +93,7 @@ function addTask(proposalId) {
             </div>
             <textarea class="task-desc-input" rows="2"
                       placeholder="Task description..."
-                      hx-trigger="keyup changed delay:1000ms"
+                      hx-trigger="keyup changed delay:1000ms, change"
                       hx-put="/api/proposal/${proposalId}"
                       hx-vals='{"tasks": "JS(getUpdatedTasks())"}'></textarea>
         `;
