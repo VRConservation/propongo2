@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propongo 2 - Proposals</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div style="max-width: 900px; margin: 0 auto; padding: 40px 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;">
+            <div>
+                <h1 style="font-size:28px;">Propongo 2</h1>
+                <p style="color:#64748b;">Proposal generator for conservation projects</p>
+            </div>
+            <a href="/new" class="btn btn-primary">New Proposal</a>
+        </div>
+
+        {% if proposals %}
+        <div class="proposals-grid">
+            {% for p in proposals %}
+            <div class="proposal-card">
+                <h3>{{ p.title or "Untitled" }}</h3>
+                <p class="client-name">{{ p.client_name or "No client" }}</p>
+                <p class="updated">Updated: {{ p.updated_at[:10] if p.updated_at else "Never" }}</p>
+                <div class="card-actions">
+                    <a href="/editor/{{ p.id }}" class="btn btn-primary btn-sm">Edit</a>
+                    <button class="btn btn-danger btn-sm" onclick="deleteProposal('{{ p.id }}')">Delete</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>No proposals yet</h2>
+            <p>Create your first proposal to get started.</p>
+            <a href="/new" class="btn btn-primary">New Proposal</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function deleteProposal(id) {
+            if (!confirm('Delete this proposal?')) return;
+            fetch('/api/proposal/' + id, { method: 'DELETE' })
+                .then(() => window.location.reload());
+        }
+    </script>
+</body>
+</html>

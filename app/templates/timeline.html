@@ -1,0 +1,51 @@
+<div class="section">
+    <h2>Timeline</h2>
+
+    <div class="form-group">
+        <label for="start-date">Project Start Date</label>
+        <input type="date" id="start-date" value="{{ start_date }}"
+               hx-trigger="change"
+               hx-put="/api/proposal/{{ proposal.id }}"
+               hx-vals='{"start_date": "JS(document.getElementById(\'start-date\').value)"}'
+               class="date-input">
+    </div>
+
+    {% if tasks %}
+    <div class="form-group">
+        <label>Task Schedule</label>
+        <div id="timeline-inputs">
+            {% for task in tasks %}
+            <div class="timeline-input-card" data-task-id="{{ task.id }}">
+                <div class="timeline-task-name">{{ task.name }}</div>
+                <div class="timeline-fields">
+                    <div class="field-group">
+                        <label>Lead (months)</label>
+                        <input type="number" min="0" max="24" value="{{ task.lead_months|default(0) }}"
+                               class="lead-months" data-task-id="{{ task.id }}">
+                    </div>
+                    <div class="field-group">
+                        <label>Duration (months)</label>
+                        <input type="number" min="1" max="24" value="{{ task.duration_months|default(1) }}"
+                               class="duration-months" data-task-id="{{ task.id }}">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button class="btn btn-primary" onclick="updateTimeline('{{ proposal.id }}')">Update Timeline</button>
+    </div>
+
+    <div class="form-group">
+        <label>Gantt Chart</label>
+        <div class="gantt-container" id="gantt-chart">
+            <div class="gantt-placeholder">Click "Update Timeline" to generate the chart.</div>
+        </div>
+    </div>
+    {% else %}
+    <div class="callout callout-warning">
+        <p><strong>No tasks available.</strong> Add tasks in the Scope section first.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script src="{{ url_for('static', filename='js/gantt.js') }}"></script>

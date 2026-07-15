@@ -1,0 +1,102 @@
+<div class="section preview-section">
+    <h2>Proposal Preview</h2>
+
+    <div class="preview-actions">
+        <button class="btn btn-secondary" onclick="window.print()">Print</button>
+        <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'pdf')">Export PDF</button>
+        <button class="btn btn-secondary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
+    </div>
+
+    <div class="preview-document" id="preview-doc">
+        <div class="preview-header">
+            <h1>{{ proposal.title or "Untitled Proposal" }}</h1>
+            {% if proposal.client_name %}
+            <p class="preview-client">Prepared for: {{ proposal.client_name }}</p>
+            {% endif %}
+        </div>
+
+        {% if proposal.project_summary %}
+        <section class="preview-section-block">
+            <h2>Project Summary</h2>
+            <div class="preview-text">{{ proposal.project_summary|replace('\n', '<br>')|safe }}</div>
+        </section>
+        {% endif %}
+
+        {% if tasks %}
+        <section class="preview-section-block">
+            <h2>Scope of Work</h2>
+            {% for task in tasks %}
+            <div class="preview-task">
+                <h3>{{ task.name }}</h3>
+                {% if task.description %}
+                <p>{{ task.description }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        {% if budget_items %}
+        <section class="preview-section-block">
+            <h2>Budget</h2>
+            <table class="preview-budget-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Cost/Unit</th>
+                        <th>Units</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in budget_items %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>${{ "%.2f"|format(item.cost_per_unit) }}</td>
+                        <td>{{ item.units }}</td>
+                        <td>${{ "%.2f"|format(item.cost_per_unit * item.units) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3"><strong>Total</strong></td>
+                        <td><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </section>
+        {% endif %}
+
+        {% if proposal.qualifications %}
+        <section class="preview-section-block">
+            <h2>Qualifications</h2>
+            <div class="preview-text">{{ proposal.qualifications|replace('\n', '<br>')|safe }}</div>
+        </section>
+        {% endif %}
+
+        {% if tasks %}
+        <section class="preview-section-block">
+            <h2>Timeline</h2>
+            <table class="preview-timeline-table">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Lead Time</th>
+                        <th>Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.name }}</td>
+                        <td>{{ task.lead_months|default(0) }} months</td>
+                        <td>{{ task.duration_months|default(1) }} months</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+        {% endif %}
+    </div>
+</div>

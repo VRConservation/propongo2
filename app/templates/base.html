@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Propongo 2{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="snippet-sidebar">
+            <div class="sidebar-header">
+                <h3>Snippets</h3>
+                <button class="btn-icon" onclick="toggleSidebar()" title="Close sidebar">&times;</button>
+            </div>
+            <div class="sidebar-content" id="snippet-list">
+                <div class="snippet-loading">Loading snippets...</div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="app-header">
+                <div class="header-left">
+                    <button class="btn-icon" onclick="toggleSidebar()" title="Open snippets panel">&#9776;</button>
+                    <h1>Propongo 2</h1>
+                </div>
+                <div class="header-center">
+                    <input type="text" id="proposal-title" class="title-input"
+                           value="{{ proposal.title }}"
+                           placeholder="Proposal title..."
+                           hx-trigger="keyup changed delay:500ms"
+                           hx-put="/api/proposal/{{ proposal.id }}"
+                           hx-vals='{"title": "JS(document.getElementById(\'proposal-title\').value)"}'
+                           hx-include="[name='client_name']">
+                    <input type="hidden" name="client_name" value="{{ proposal.client_name }}">
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-secondary" onclick="loadProposalList()">Proposals</button>
+                    <button class="btn btn-secondary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
+                    <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'pdf')">Export PDF</button>
+                </div>
+            </header>
+
+            <nav class="tab-nav">
+                <button class="tab-btn active" data-tab="scope"
+                        hx-get="/scope/{{ proposal.id }}"
+                        hx-target="#tab-content"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="activateTab(this)">Scope</button>
+                <button class="tab-btn" data-tab="budget"
+                        hx-get="/budget/{{ proposal.id }}"
+                        hx-target="#tab-content"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="activateTab(this)">Budget</button>
+                <button class="tab-btn" data-tab="qualifications"
+                        hx-get="/qualifications/{{ proposal.id }}"
+                        hx-target="#tab-content"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="activateTab(this)">Qualifications</button>
+                <button class="tab-btn" data-tab="timeline"
+                        hx-get="/timeline/{{ proposal.id }}"
+                        hx-target="#tab-content"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="activateTab(this)">Timeline</button>
+                <button class="tab-btn" data-tab="preview"
+                        hx-get="/preview/{{ proposal.id }}"
+                        hx-target="#tab-content"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="activateTab(this)">Preview</button>
+            </nav>
+
+            <div id="tab-content" class="tab-content">
+                {% include "scope.html" %}
+            </div>
+        </main>
+    </div>
+
+    <div id="proposal-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Your Proposals</h2>
+                <button class="btn-icon" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="proposal-list-body">
+            </div>
+            <div class="modal-footer">
+                <a href="/new" class="btn btn-primary">New Proposal</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/snippets.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
