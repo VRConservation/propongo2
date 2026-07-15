@@ -45,6 +45,10 @@
                             <a class="hamburger-item" href="/new">New Proposal</a>
                             <button class="hamburger-item" onclick="openSaveAsModal(); closeHamburger()">Save As...</button>
                             <hr class="hamburger-divider">
+                            <button class="hamburger-item" onclick="exportProposal('{{ proposal.id }}', 'html'); closeHamburger()">Export HTML</button>
+                            <button class="hamburger-item" onclick="exportProposal('{{ proposal.id }}', 'pdf'); closeHamburger()">Export PDF</button>
+                            <button class="hamburger-item" onclick="window.print(); closeHamburger()">Print</button>
+                            <hr class="hamburger-divider">
                             <button class="hamburger-item hamburger-theme-btn" onclick="toggleDarkMode()" id="dark-mode-toggle">
                                 <span id="dark-mode-label">Dark Mode: Off</span>
                             </button>

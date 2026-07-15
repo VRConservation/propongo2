@@ -1,9 +1,10 @@
 import json
+import os
 import re
 import uuid as _uuid
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from markupsafe import Markup
-from .models import Proposal
+from .models import Proposal, PROPOSALS_DIR
 from .export import export_bp
 from .snippets import snippets_bp
 
@@ -150,6 +151,30 @@ def create_app():
                 merged.append(merged_task)
             proposal.tasks = merged
 
+        new_title = data.get("title")
+        new_id = None
+        if new_title is not None and new_title.strip() and new_title.strip() != proposal.title:
+            candidate = re.sub(r"[^a-z0-9_-]", "_", new_title.strip().lower())
+            candidate = re.sub(r"_+", "_", candidate).strip("_")
+            if not candidate:
+                candidate = _uuid.uuid4().hex[:8]
+            original = candidate
+            counter = 1
+            while Proposal.load(candidate) and candidate != proposal_id:
+                candidate = f"{original}_{counter}"
+                counter += 1
+            if candidate != proposal_id:
+                old_path = os.path.join(PROPOSALS_DIR, f"{proposal_id}.json")
+                proposal.id = candidate
+                new_id = candidate
+                for key, value in data.items():
+                    if hasattr(proposal, key):
+                        setattr(proposal, key, value)
+                proposal.save()
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+                return jsonify({"id": new_id, **proposal.to_dict()})
+
         for key, value in data.items():
             if hasattr(proposal, key):
                 setattr(proposal, key, value)
@@ -190,6 +215,7 @@ def create_app():
         new_proposal.tasks = list(proposal.tasks)
         new_proposal.qualifications = proposal.qualifications
         new_proposal.budget_items = list(proposal.budget_items)
+        new_proposal.budget_item_timings = dict(proposal.budget_item_timings) if proposal.budget_item_timings else {}
         new_proposal.start_date = proposal.start_date
         new_proposal.indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
         new_proposal.save()
