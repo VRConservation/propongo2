@@ -1,168 +1,163 @@
-<div class="section preview-section">
-    <h2>Proposal Preview</h2>
-
-    <div class="preview-actions">
-        <button class="btn btn-secondary" onclick="window.print()">Print</button>
-        <button class="btn btn-secondary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
-        <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'pdf')">Export PDF</button>
+<div class="section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2>Proposal Preview</h2>
+        <div class="preview-actions">
+            <button class="btn btn-secondary" onclick="window.print()">Print</button>
+            <button class="btn btn-secondary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
+            <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'pdf')">Export PDF</button>
+        </div>
     </div>
 
-    <div class="preview-document" id="preview-doc">
-        <div class="preview-header">
-            <h1>{{ proposal.title or "Untitled Proposal" }}</h1>
-            {% if proposal.client_name %}
-            <p class="preview-client">Prepared for: {{ proposal.client_name }}</p>
+    <div class="form-group">
+        <label>Client</label>
+        <p style="font-size:15px;">{{ proposal.client_name or "—" }}</p>
+    </div>
+
+    {% if proposal.project_summary %}
+    <div class="form-group">
+        <label>Project Summary</label>
+        <div style="font-size:14px;line-height:1.7;">{{ proposal.project_summary|md }}</div>
+    </div>
+    {% endif %}
+
+    {% if tasks %}
+    <div class="form-group">
+        <label>Scope of Work</label>
+        {% for task in tasks %}
+        <div class="budget-item-card" style="flex-direction:column;align-items:stretch;gap:4px;margin-bottom:8px;">
+            <strong>{{ task.name }}</strong>
+            {% if task.description %}
+            <div style="font-size:13px;color:var(--text-muted);">{{ task.description|md }}</div>
+            {% endif %}
+            {% if task.lead_entity %}
+            <div style="font-size:12px;color:var(--text-muted);">Lead: {{ task.lead_entity }}</div>
             {% endif %}
         </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-        {% if proposal.project_summary %}
-        <section class="preview-section-block">
-            <h2>Project Summary</h2>
-            <div class="preview-text">{{ proposal.project_summary|md }}</div>
-        </section>
-        {% endif %}
-
-        {% if tasks %}
-        <section class="preview-section-block">
-            <h2>Scope of Work</h2>
-            {% for task in tasks %}
-            <div class="preview-task">
-                <h3>{{ task.name }}</h3>
-                {% if task.description %}
-                <div>{{ task.description|md }}</div>
+    {% if budget_items %}
+    <div class="form-group">
+        <label>Budget</label>
+        <table class="preview-budget-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="num-col">Cost/Unit</th>
+                    <th class="num-col">Units</th>
+                    <th class="num-col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in budget_items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td class="num-col">${{ item.cost_per_unit|currency }}</td>
+                    <td class="num-col">{{ item.units|currency }}</td>
+                    <td class="num-col">${{ (item.cost_per_unit * item.units)|currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3"><strong>Subtotal</strong></td>
+                    <td class="num-col"><strong>${{ total_budget|currency }}</strong></td>
+                </tr>
+                {% if indirect_percent is defined and indirect_percent > 0 %}
+                <tr>
+                    <td colspan="3">Indirect ({{ "%.0f"|format(indirect_percent) }}%)</td>
+                    <td class="num-col">${{ indirect_amount|currency }}</td>
+                </tr>
                 {% endif %}
+                <tr class="total-row">
+                    <td colspan="3"><strong>Total</strong></td>
+                    <td class="num-col"><strong>${{ total_with_indirect|currency }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if proposal.qualifications %}
+    <div class="form-group">
+        <label>Qualifications</label>
+        <div style="font-size:14px;line-height:1.7;">{{ proposal.qualifications|md }}</div>
+    </div>
+    {% endif %}
+
+    {% if tasks %}
+    <div class="form-group">
+        <label>Timeline</label>
+        {% set proj_start_month = proposal.start_date[5:7]|int if proposal.start_date and proposal.start_date|length >= 7 else 1 %}
+        {% set proj_start_year = proposal.start_date[:4]|int if proposal.start_date and proposal.start_date|length >= 4 else 2025 %}
+        {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+
+        {% set all_rows = [] %}
+        {% for task in tasks %}
+            {% set t_sm = task.start_month|default(proj_start_month)|int %}
+            {% set t_sy = task.start_year|default(proj_start_year)|int %}
+            {% set t_offset = (t_sy - proj_start_year) * 12 + (t_sm - proj_start_month) %}
+            {% set t_dur = task.duration_months|default(1)|int %}
+            {% if all_rows.append({'name': task.name, 'offset': t_offset, 'duration': t_dur, 'is_indent': false, 'lead_entity': task.lead_entity|default(''), 'start_month': t_sm, 'start_year': t_sy}) %}{% endif %}
+
+            {% for bi in budget_with_timing %}
+                {% if bi.task_id == task.id %}
+                    {% set bi_sm = bi.start_month|default(t_sm)|int %}
+                    {% set bi_sy = bi.start_year|default(t_sy)|int %}
+                    {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
+                    {% set bi_dur = bi.duration_months|default(1)|int %}
+                    {% if all_rows.append({'name': bi.name, 'offset': bi_offset, 'duration': bi_dur, 'is_indent': true, 'lead_entity': '', 'start_month': bi_sm, 'start_year': bi_sy}) %}{% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+
+        {% set max_end = 0 %}
+        {% for r in all_rows %}
+            {% set row_end = r.offset + r.duration %}
+            {% if row_end > max_end %}{% set max_end = row_end %}{% endif %}
+        {% endfor %}
+        {% set total_project_months = [max_end, 12]|max %}
+
+        <div class="preview-timeline-chart">
+            {% for r in all_rows %}
+            {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
+            {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
+            {% set abs_sm = proj_start_month + r.offset - 1 %}
+            {% set abs_sy = proj_start_year + (abs_sm // 12) %}
+            {% set abs_sm_1based = (abs_sm % 12) + 1 %}
+            <div class="preview-timeline-row{% if r.is_indent %} preview-timeline-row-indent{% endif %}">
+                <div class="preview-timeline-label">{{ r.name }}</div>
+                <div class="preview-timeline-bar-track">
+                    <div class="preview-timeline-bar{% if r.is_indent %} preview-timeline-bar-indent{% endif %}" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
+                    <span class="preview-timeline-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} &middot; {{ r.duration }} mo</span>
+                </div>
             </div>
             {% endfor %}
-        </section>
-        {% endif %}
-
-        {% if budget_items %}
-        <section class="preview-section-block">
-            <h2>Budget</h2>
-            <table class="preview-budget-table">
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th class="num-col">Cost/Unit</th>
-                        <th class="num-col">Units</th>
-                        <th class="num-col">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in budget_items %}
-                    <tr>
-                        <td>{{ item.name }}</td>
-                        <td class="num-col">{{ item.cost_per_unit|currency }}</td>
-                        <td class="num-col">{{ item.units }}</td>
-                        <td class="num-col">{{ (item.cost_per_unit * item.units)|currency }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3"><strong>Subtotal</strong></td>
-                        <td class="num-col"><strong>${{ total_budget|currency }}</strong></td>
-                    </tr>
-                    {% if indirect_percent is defined and indirect_percent > 0 %}
-                    <tr>
-                        <td colspan="3">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
-                        <td class="num-col">{{ indirect_amount|currency }}</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td colspan="3"><strong>Total</strong></td>
-                        <td class="num-col"><strong>${{ total_with_indirect|currency }}</strong></td>
-                    </tr>
-                    {% else %}
-                    <tr class="total-row">
-                        <td colspan="3"><strong>Total</strong></td>
-                        <td class="num-col"><strong>${{ total_budget|currency }}</strong></td>
-                    </tr>
-                    {% endif %}
-                </tfoot>
-            </table>
-        </section>
-        {% endif %}
-
-        {% if proposal.qualifications %}
-        <section class="preview-section-block">
-            <h2>Qualifications</h2>
-            <div class="preview-text">{{ proposal.qualifications|md }}</div>
-        </section>
-        {% endif %}
-
-        {% if tasks %}
-        <section class="preview-section-block">
-            <h2>Timeline</h2>
-            {% set proj_start_month = proposal.start_date[5:7]|int if proposal.start_date and proposal.start_date|length >= 7 else 1 %}
-            {% set proj_start_year = proposal.start_date[:4]|int if proposal.start_date and proposal.start_date|length >= 4 else 2025 %}
-            {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
-
-            {% set all_rows = [] %}
-            {% for task in tasks %}
-                {% set t_sm = task.start_month|default(proj_start_month)|int %}
-                {% set t_sy = task.start_year|default(proj_start_year)|int %}
-                {% set t_offset = (t_sy - proj_start_year) * 12 + (t_sm - proj_start_month) %}
-                {% set t_dur = task.duration_months|default(1)|int %}
-                {% if all_rows.append({'name': task.name, 'offset': t_offset, 'duration': t_dur, 'is_indent': false, 'lead_entity': task.lead_entity|default(''), 'start_month': t_sm, 'start_year': t_sy}) %}{% endif %}
-
-                {% for bi in budget_with_timing %}
-                    {% if bi.task_id == task.id %}
-                        {% set bi_sm = bi.start_month|default(t_sm)|int %}
-                        {% set bi_sy = bi.start_year|default(t_sy)|int %}
-                        {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
-                        {% set bi_dur = bi.duration_months|default(1)|int %}
-                        {% if all_rows.append({'name': bi.name, 'offset': bi_offset, 'duration': bi_dur, 'is_indent': true, 'lead_entity': '', 'start_month': bi_sm, 'start_year': bi_sy}) %}{% endif %}
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-
-            {% set max_end = 0 %}
-            {% for r in all_rows %}
-                {% set row_end = r.offset + r.duration %}
-                {% if row_end > max_end %}{% set max_end = row_end %}{% endif %}
-            {% endfor %}
-            {% set total_project_months = [max_end, 12]|max %}
-
-            <div class="preview-timeline-chart">
+        </div>
+        <table class="preview-timeline-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Lead</th>
+                    <th>Start</th>
+                    <th>Duration</th>
+                </tr>
+            </thead>
+            <tbody>
                 {% for r in all_rows %}
-                {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
-                {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
                 {% set abs_sm = proj_start_month + r.offset - 1 %}
                 {% set abs_sy = proj_start_year + (abs_sm // 12) %}
                 {% set abs_sm_1based = (abs_sm % 12) + 1 %}
-                <div class="preview-timeline-row{% if r.is_indent %} preview-timeline-row-indent{% endif %}">
-                    <div class="preview-timeline-label">{{ r.name }}</div>
-                    <div class="preview-timeline-bar-track">
-                        <div class="preview-timeline-bar{% if r.is_indent %} preview-timeline-bar-indent{% endif %}" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
-                        <span class="preview-timeline-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} &middot; {{ r.duration }} mo</span>
-                    </div>
-                </div>
+                <tr>
+                    <td{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</td>
+                    <td>{{ r.lead_entity }}</td>
+                    <td>{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }}</td>
+                    <td>{{ r.duration }} months</td>
+                </tr>
                 {% endfor %}
-            </div>
-            <table class="preview-timeline-table">
-                <thead>
-                    <tr>
-                        <th>Task</th>
-                        <th>Lead</th>
-                        <th>Start</th>
-                        <th>Duration</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for r in all_rows %}
-                    {% set abs_sm = proj_start_month + r.offset - 1 %}
-                    {% set abs_sy = proj_start_year + (abs_sm // 12) %}
-                    {% set abs_sm_1based = (abs_sm % 12) + 1 %}
-                    <tr>
-                        <td{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</td>
-                        <td>{{ r.lead_entity }}</td>
-                        <td>{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }}</td>
-                        <td>{{ r.duration }} months</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
-        {% endif %}
+            </tbody>
+        </table>
     </div>
+    {% endif %}
 </div>

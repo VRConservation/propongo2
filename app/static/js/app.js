@@ -19,6 +19,9 @@ function saveCurrentTabData(proposalId) {
     if (summaryEl) data.project_summary = summaryEl.value;
     if (qualsEl) data.qualifications = qualsEl.value;
 
+    const indirectEl = document.getElementById('indirect-percent');
+    if (indirectEl) data.indirect_percent = parseFloat(indirectEl.value) || 0;
+
     const taskList = document.getElementById('task-list');
     if (taskList) {
         const cards = taskList.querySelectorAll('.task-card');
@@ -38,6 +41,8 @@ function saveCurrentTabData(proposalId) {
         const startMonth = parseInt(document.getElementById('start-month')?.value) || 1;
         const startYear = parseInt(document.getElementById('start-year')?.value) || 2025;
         data.start_date = startYear + '-' + String(startMonth).padStart(2, '0') + '-01';
+        data.timeline_use_days = !!useDays;
+        data.timeline_show_budget = !!document.getElementById('timeline-show-budget')?.checked;
 
         const saveTasks = [];
         const budgetTimings = {};
@@ -48,6 +53,7 @@ function saveCurrentTabData(proposalId) {
 
             saveTasks.push({
                 id: card.dataset.taskId,
+                name: card.querySelector('.timeline-task-name')?.textContent?.trim() || '',
                 lead_entity: card.querySelector('.lead-entity')?.value || '',
                 start_month: parseInt(card.querySelector('.task-start-month')?.value) || startMonth,
                 start_year: parseInt(card.querySelector('.task-start-year')?.value) || startYear,
@@ -68,10 +74,8 @@ function saveCurrentTabData(proposalId) {
             }
         });
 
-        if (saveTasks.length > 0) {
-            data.tasks = saveTasks;
-            data.budget_item_timings = budgetTimings;
-        }
+        data.tasks = saveTasks;
+        data.budget_item_timings = budgetTimings;
     }
 
     if (Object.keys(data).length > 0) {
@@ -95,15 +99,12 @@ async function switchTab(proposalId, tabName, btn) {
 
     await saveCurrentTabData(proposalId);
 
-    const response = await fetch(routes[tabName] + proposalId);
+    const response = await fetch(routes[tabName] + proposalId + '?t=' + Date.now());
     const html = await response.text();
     document.getElementById('tab-content').innerHTML = html;
 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-
-    const tabContent = document.getElementById('tab-content');
-    tabContent.classList.toggle('preview-mode', tabName === 'preview');
 
     document.querySelectorAll('#tab-content [hx-trigger]').forEach(el => {
         htmx.process(el);
@@ -111,10 +112,11 @@ async function switchTab(proposalId, tabName, btn) {
 }
 
 function exportProposal(proposalId, format) {
+    const t = '?t=' + Date.now();
     if (format === 'pdf') {
-        window.open('/export/pdf/' + proposalId, '_blank');
+        window.open('/export/pdf/' + proposalId + t, '_blank');
     } else if (format === 'html') {
-        window.open('/export/html/' + proposalId, '_blank');
+        window.open('/export/html/' + proposalId + t, '_blank');
     }
 }
 
@@ -223,7 +225,8 @@ function getUpdatedTasks() {
 function openSaveAsModal() {
     const modal = document.getElementById('save-as-modal');
     const input = document.getElementById('save-as-title');
-    input.value = document.getElementById('proposal-title').value;
+    const titleEl = document.getElementById('proposal-title');
+    input.value = titleEl ? (titleEl.textContent || '') : '';
     modal.classList.remove('hidden');
     input.focus();
     input.select();

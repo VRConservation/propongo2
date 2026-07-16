@@ -193,6 +193,14 @@ body {
     background: var(--surface);
 }
 
+.title-display {
+    font-size: 15px;
+    font-weight: 500;
+    padding: 6px 8px;
+    text-align: center;
+    color: var(--text);
+}
+
 .header-right {
     display: flex;
     gap: 8px;
@@ -231,11 +239,6 @@ body {
     padding: 24px;
     max-width: 900px;
     width: 100%;
-}
-
-.tab-content.preview-mode {
-    max-width: 100%;
-    padding: 24px 40px;
 }
 
 .section h2 {
@@ -614,11 +617,6 @@ textarea {
 }
 
 .preview-document {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 40px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     max-width: 100%;
     width: 100%;
 }

@@ -93,12 +93,3 @@ def export_html(proposal_id):
         },
     )
 
-
-@export_bp.route("/preview/<proposal_id>")
-def preview(proposal_id):
-    proposal = Proposal.load(proposal_id)
-    if not proposal:
-        return jsonify({"error": "Proposal not found"}), 404
-
-    ctx = _build_export_context(proposal)
-    return render_template("export_proposal.html", **ctx)

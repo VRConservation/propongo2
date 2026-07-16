@@ -27,15 +27,7 @@
                     <h1>Propongo 2</h1>
                 </div>
                 <div class="header-center">
-                    <input type="text" id="proposal-title" class="title-input"
-                           value="{{ proposal.title }}"
-                           placeholder="Proposal title..."
-                           hx-trigger="keyup changed delay:500ms"
-                           hx-put="/api/proposal/{{ proposal.id }}"
-                           hx-encoding="json"
-                           hx-vals='{"title": "JS(document.getElementById(\'proposal-title\').value)"}'
-                           hx-include="[name='client_name']">
-                    <input type="hidden" name="client_name" value="{{ proposal.client_name }}">
+                    <h1 id="proposal-title" class="title-display">{{ proposal.title or "Untitled Proposal" }}</h1>
                 </div>
                 <div class="header-right">
                     <div class="hamburger-menu">

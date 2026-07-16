@@ -33,7 +33,7 @@
                     {% if task.id in task_budgets %}
                     <span class="budget-task-subtotal" data-task-id="{{ task.id }}">${{ task_budgets[task.id].subtotal|currency }}</span>
                     {% else %}
-                    <span class="budget-task-subtotal" data-task-id="{{ task.id }}">$0.00</span>
+                    <span class="budget-task-subtotal" data-task-id="{{ task.id }}">$0</span>
                     {% endif %}
                 </div>
                 {% if task.id in task_budgets %}

@@ -95,7 +95,7 @@ def create_app():
     app.register_blueprint(snippets_bp)
 
     app.jinja_env.filters["md"] = lambda text: Markup(markdown_to_html(text))
-    app.jinja_env.filters["currency"] = lambda value: f"{value:,.2f}"
+    app.jinja_env.filters["currency"] = lambda value: f"{value:,.0f}"
 
     @app.route("/")
     def index():
@@ -135,7 +135,7 @@ def create_app():
 
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            proposal = Proposal(id=proposal_id)
+            return jsonify({"error": "Not found"}), 404
 
         if "tasks" in data:
             incoming_tasks = data.pop("tasks")
@@ -151,31 +151,10 @@ def create_app():
                 merged.append(merged_task)
             proposal.tasks = merged
 
-        new_title = data.get("title")
-        new_id = None
-        if new_title is not None and new_title.strip() and new_title.strip() != proposal.title:
-            candidate = re.sub(r"[^a-z0-9_-]", "_", new_title.strip().lower())
-            candidate = re.sub(r"_+", "_", candidate).strip("_")
-            if not candidate:
-                candidate = _uuid.uuid4().hex[:8]
-            original = candidate
-            counter = 1
-            while Proposal.load(candidate) and candidate != proposal_id:
-                candidate = f"{original}_{counter}"
-                counter += 1
-            if candidate != proposal_id:
-                old_path = os.path.join(PROPOSALS_DIR, f"{proposal_id}.json")
-                proposal.id = candidate
-                new_id = candidate
-                for key, value in data.items():
-                    if hasattr(proposal, key):
-                        setattr(proposal, key, value)
-                proposal.save()
-                if os.path.exists(old_path):
-                    os.remove(old_path)
-                return jsonify({"id": new_id, **proposal.to_dict()})
-
+        skip_fields = {"id", "title", "created_at"}
         for key, value in data.items():
+            if key in skip_fields:
+                continue
             if hasattr(proposal, key):
                 setattr(proposal, key, value)
 

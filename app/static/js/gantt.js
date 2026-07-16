@@ -52,6 +52,7 @@ function autoSaveTimeline(proposalId) {
 
             saveTasks.push({
                 id: card.dataset.taskId,
+                name: card.querySelector('.timeline-task-name')?.textContent?.trim() || '',
                 lead_entity: card.querySelector('.lead-entity')?.value || '',
                 start_month: parseInt(card.querySelector('.task-start-month')?.value) || projectStartMonth,
                 start_year: parseInt(card.querySelector('.task-start-year')?.value) || projectStartYear,
@@ -149,6 +150,7 @@ function updateTimeline(proposalId) {
 
     const saveTasks = tasks.filter(t => !t.is_budget).map(t => ({
         id: t.id,
+        name: t.name || '',
         lead_entity: t.lead_entity,
         start_month: t.start_month,
         start_year: t.start_year,
