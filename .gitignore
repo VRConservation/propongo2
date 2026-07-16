@@ -52,3 +52,4 @@ htmlcov/
 # Local data (if you want to keep proposal files out of git)
 # data/proposals/*.json
 # data/exports/*
+bump.md
