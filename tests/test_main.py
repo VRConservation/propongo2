@@ -2,21 +2,26 @@ import json
 import os
 import tempfile
 import shutil
+import app.models as models
 from app.main import create_app
-from app.models import Proposal, PROPOSALS_DIR
+from app.models import Proposal
+
+
+_orig_dir = models.PROPOSALS_DIR
+_test_dir = None
 
 
 def setup_function():
-    """Create a temp proposals dir for tests."""
-    os.makedirs(PROPOSALS_DIR, exist_ok=True)
+    global _test_dir
+    _test_dir = tempfile.mkdtemp()
+    models.PROPOSALS_DIR = _test_dir
 
 
 def teardown_function():
-    """Clean up test proposals."""
-    if os.path.exists(PROPOSALS_DIR):
-        for f in os.listdir(PROPOSALS_DIR):
-            if f.endswith(".json"):
-                os.remove(os.path.join(PROPOSALS_DIR, f))
+    global _test_dir
+    models.PROPOSALS_DIR = _orig_dir
+    if _test_dir and os.path.exists(_test_dir):
+        shutil.rmtree(_test_dir)
 
 
 def test_index_page():
@@ -92,7 +97,26 @@ def test_api_put_proposal():
         )
         assert resp.status_code == 200
         data = json.loads(resp.data)
-        assert data["title"] == "Updated"
+        assert data["title"] == "Original"
+
+
+def test_api_put_updates_data_fields():
+    p = Proposal(title="Data Test")
+    p.client_name = "Old Client"
+    p.save()
+
+    app = create_app()
+    app.config["TESTING"] = True
+    with app.test_client() as client:
+        resp = client.put(
+            f"/api/proposal/{p.id}",
+            json={"client_name": "New Client", "title": "Should Not Change"},
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert data["client_name"] == "New Client"
+        assert data["title"] == "Data Test"
 
 
 def test_api_delete_proposal():

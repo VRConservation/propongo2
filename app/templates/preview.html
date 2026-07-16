@@ -8,21 +8,27 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label>Client</label>
-        <p style="font-size:15px;">{{ proposal.client_name or "—" }}</p>
+    <div style="display:flex;gap:24px;margin-bottom:16px;">
+        <div class="form-group" style="flex:1;">
+            <h3>Funder</h3>
+            <p style="font-size:15px;">{{ proposal.client_name or "—" }}</p>
+        </div>
+        <div class="form-group" style="flex:1;">
+            <h3>Program</h3>
+            <p style="font-size:15px;">{{ proposal.subtitle or "—" }}</p>
+        </div>
     </div>
 
     {% if proposal.project_summary %}
     <div class="form-group">
-        <label>Project Summary</label>
+        <h3>Project Summary</h3>
         <div style="font-size:14px;line-height:1.7;">{{ proposal.project_summary|md }}</div>
     </div>
     {% endif %}
 
     {% if tasks %}
     <div class="form-group">
-        <label>Scope of Work</label>
+        <h3>Scope of Work</h3>
         {% for task in tasks %}
         <div class="budget-item-card" style="flex-direction:column;align-items:stretch;gap:4px;margin-bottom:8px;">
             <strong>{{ task.name }}</strong>
@@ -39,7 +45,7 @@
 
     {% if budget_items %}
     <div class="form-group">
-        <label>Budget</label>
+        <h3>Budget</h3>
         <table class="preview-budget-table">
             <thead>
                 <tr>
@@ -81,17 +87,31 @@
 
     {% if proposal.qualifications %}
     <div class="form-group">
-        <label>Qualifications</label>
+        <h3>Qualifications</h3>
         <div style="font-size:14px;line-height:1.7;">{{ proposal.qualifications|md }}</div>
     </div>
     {% endif %}
 
     {% if tasks %}
     <div class="form-group">
-        <label>Timeline</label>
+        <h3>Timeline</h3>
         {% set proj_start_month = proposal.start_date[5:7]|int if proposal.start_date and proposal.start_date|length >= 7 else 1 %}
         {% set proj_start_year = proposal.start_date[:4]|int if proposal.start_date and proposal.start_date|length >= 4 else 2025 %}
         {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+
+        {% set task_bi_data = {} %}
+        {% for bi in budget_with_timing %}
+            {% set tid = bi.task_id|string %}
+            {% if tid not in task_bi_data %}
+                {% if task_bi_data.update({tid: {'min_offset': 9999, 'max_end': 0}}) %}{% endif %}
+            {% endif %}
+            {% set bi_sm = bi.start_month|default(proj_start_month)|int %}
+            {% set bi_sy = bi.start_year|default(proj_start_year)|int %}
+            {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
+            {% set bi_dur = bi.duration_months|default(1)|int %}
+            {% set bi_end = bi_offset + bi_dur %}
+            {% set _ = task_bi_data[tid].update({'min_offset': [task_bi_data[tid].min_offset, bi_offset]|min, 'max_end': [task_bi_data[tid].max_end, bi_end]|max}) %}
+        {% endfor %}
 
         {% set all_rows = [] %}
         {% for task in tasks %}
@@ -99,6 +119,12 @@
             {% set t_sy = task.start_year|default(proj_start_year)|int %}
             {% set t_offset = (t_sy - proj_start_year) * 12 + (t_sm - proj_start_month) %}
             {% set t_dur = task.duration_months|default(1)|int %}
+            {% set tid = task.id|string %}
+            {% if tid in task_bi_data %}
+                {% set t_offset = task_bi_data[tid].min_offset %}
+                {% set t_dur = task_bi_data[tid].max_end - task_bi_data[tid].min_offset %}
+                {% if t_dur < 1 %}{% set t_dur = 1 %}{% endif %}
+            {% endif %}
             {% if all_rows.append({'name': task.name, 'offset': t_offset, 'duration': t_dur, 'is_indent': false, 'lead_entity': task.lead_entity|default(''), 'start_month': t_sm, 'start_year': t_sy}) %}{% endif %}
 
             {% for bi in budget_with_timing %}

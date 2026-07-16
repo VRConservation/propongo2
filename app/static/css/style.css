@@ -761,7 +761,7 @@ textarea {
 
 .preview-timeline-bar {
     height: 100%;
-    background: var(--primary);
+    background: #1d4ed8;
     border-radius: 4px;
     min-width: 4px;
 }
@@ -784,8 +784,7 @@ textarea {
 }
 
 .preview-timeline-bar-indent {
-    background: var(--text-muted);
-    opacity: 0.6;
+    background: #bfdbfe;
 }
 
 /* Proposals list page */
@@ -964,8 +963,7 @@ textarea {
 }
 
 .gantt-bar-budget {
-    background: var(--text-muted);
-    opacity: 0.6;
+    background: #bfdbfe;
 }
 
 .gantt-bar-container {
@@ -984,7 +982,7 @@ textarea {
 }
 
 .gantt-bar {
-    background: var(--primary);
+    background: #1d4ed8;
     height: 20px;
     border-radius: 3px;
     min-width: 60px;

@@ -2,11 +2,15 @@ import json
 import os
 import re
 import uuid as _uuid
+import threading
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from markupsafe import Markup
 from .models import Proposal, PROPOSALS_DIR
 from .export import export_bp
 from .snippets import snippets_bp
+
+_proposal_locks = {}
+_proposal_locks_lock = threading.Lock()
 
 
 def markdown_to_html(text):
@@ -133,33 +137,39 @@ def create_app():
         if not data:
             return jsonify({"error": "No data"}), 400
 
-        proposal = Proposal.load(proposal_id)
-        if not proposal:
-            return jsonify({"error": "Not found"}), 404
+        with _proposal_locks_lock:
+            if proposal_id not in _proposal_locks:
+                _proposal_locks[proposal_id] = threading.Lock()
+            lock = _proposal_locks[proposal_id]
 
-        if "tasks" in data:
-            incoming_tasks = data.pop("tasks")
-            existing_by_id = {t.get("id"): t for t in proposal.tasks}
-            merged = []
-            for t in incoming_tasks:
-                tid = t.get("id", "")
-                if tid in existing_by_id:
-                    merged_task = dict(existing_by_id[tid])
-                    merged_task.update(t)
-                else:
-                    merged_task = t
-                merged.append(merged_task)
-            proposal.tasks = merged
+        with lock:
+            proposal = Proposal.load(proposal_id)
+            if not proposal:
+                return jsonify({"error": "Not found"}), 404
 
-        skip_fields = {"id", "title", "created_at"}
-        for key, value in data.items():
-            if key in skip_fields:
-                continue
-            if hasattr(proposal, key):
-                setattr(proposal, key, value)
+            if "tasks" in data:
+                incoming_tasks = data.pop("tasks")
+                existing_by_id = {t.get("id"): t for t in proposal.tasks}
+                merged = []
+                for t in incoming_tasks:
+                    tid = t.get("id", "")
+                    if tid in existing_by_id:
+                        merged_task = dict(existing_by_id[tid])
+                        merged_task.update(t)
+                    else:
+                        merged_task = t
+                    merged.append(merged_task)
+                proposal.tasks = merged
 
-        proposal.save()
-        return jsonify(proposal.to_dict())
+            skip_fields = {"id", "title", "created_at"}
+            for key, value in data.items():
+                if key in skip_fields:
+                    continue
+                if hasattr(proposal, key):
+                    setattr(proposal, key, value)
+
+            proposal.save()
+            return jsonify(proposal.to_dict())
 
     @app.route("/api/proposal/<proposal_id>", methods=["DELETE"])
     def delete_proposal(proposal_id):
@@ -190,6 +200,7 @@ def create_app():
 
         new_proposal = Proposal(id=new_id, title=title)
         new_proposal.client_name = proposal.client_name
+        new_proposal.subtitle = getattr(proposal, 'subtitle', '') or ''
         new_proposal.project_summary = proposal.project_summary
         new_proposal.tasks = list(proposal.tasks)
         new_proposal.qualifications = proposal.qualifications

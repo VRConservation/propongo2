@@ -1,20 +1,26 @@
+import os
+import tempfile
+import shutil
+import app.models as models
 from app.main import create_app
 from app.models import Proposal
 
 
+_orig_dir = models.PROPOSALS_DIR
+_test_dir = None
+
+
 def setup_function():
-    import os
-    from app.models import PROPOSALS_DIR
-    os.makedirs(PROPOSALS_DIR, exist_ok=True)
+    global _test_dir
+    _test_dir = tempfile.mkdtemp()
+    models.PROPOSALS_DIR = _test_dir
 
 
 def teardown_function():
-    import os
-    from app.models import PROPOSALS_DIR
-    if os.path.exists(PROPOSALS_DIR):
-        for f in os.listdir(PROPOSALS_DIR):
-            if f.endswith(".json"):
-                os.remove(os.path.join(PROPOSALS_DIR, f))
+    global _test_dir
+    models.PROPOSALS_DIR = _orig_dir
+    if _test_dir and os.path.exists(_test_dir):
+        shutil.rmtree(_test_dir)
 
 
 def test_export_html():
@@ -65,4 +71,35 @@ def test_preview_route():
     with app.test_client() as client:
         resp = client.get(f"/preview/{p.id}")
         assert resp.status_code == 200
-        assert b"Preview Test" in resp.data
+        assert b"Proposal Preview" in resp.data
+
+
+def test_preview_timeline_expands_task_bars():
+    import re
+    p = Proposal(title="Timeline Expand Test")
+    p.tasks = [
+        {"id": "t1", "name": "Phase 1", "start_month": 1, "start_year": 2026, "duration_months": 3},
+    ]
+    p.budget_items = [
+        {"id": "b1", "task_id": "t1", "name": "Early Item", "cost_per_unit": 100, "units": 1},
+        {"id": "b2", "task_id": "t1", "name": "Late Item", "cost_per_unit": 200, "units": 1},
+    ]
+    p.budget_item_timings = {
+        "b1": {"start_month": 1, "start_year": 2026, "duration_months": 1},
+        "b2": {"start_month": 5, "start_year": 2026, "duration_months": 1},
+    }
+    p.save()
+
+    app = create_app()
+    app.config["TESTING"] = True
+    with app.test_client() as client:
+        resp = client.get(f"/preview/{p.id}")
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        bars = re.findall(r'preview-timeline-bar(?:-indent)?"[^>]*style="([^"]+)"', html)
+        task_bar = bars[0]
+        assert "margin-left" in task_bar
+        task_bar_items = re.findall(r'([\w-]+):([^;]+)', task_bar)
+        styles = {k: v.strip() for k, v in task_bar_items}
+        width_val = float(styles['width'].rstrip('%'))
+        assert width_val > 25.0, f"Task bar width {width_val}% should span beyond original 25% (3 months)"

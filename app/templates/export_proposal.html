@@ -152,7 +152,7 @@
             color: #666;
         }
         .timeline-chart-bar-indent {
-            background: #94a3b8;
+            background: #93c5fd;
         }
     </style>
 </head>
@@ -160,7 +160,10 @@
     <div class="doc-header">
         <h1>{{ proposal.title or "Proposal" }}</h1>
         {% if proposal.client_name %}
-        <div class="client">Prepared for: {{ proposal.client_name }}</div>
+        <div class="client">Funder: {{ proposal.client_name }}</div>
+        {% endif %}
+        {% if proposal.subtitle %}
+        <div class="client">Program: {{ proposal.subtitle }}</div>
         {% endif %}
         <div class="date">{{ proposal.updated_at[:10] if proposal.updated_at else "" }}</div>
     </div>
@@ -247,12 +250,32 @@
         {% set proj_start_year = proposal.start_date[:4]|int if proposal.start_date and proposal.start_date|length >= 4 else 2025 %}
         {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
 
+        {% set task_bi_data = {} %}
+        {% for bi in budget_with_timing %}
+            {% set tid = bi.task_id|string %}
+            {% if tid not in task_bi_data %}
+                {% if task_bi_data.update({tid: {'min_offset': 9999, 'max_end': 0}}) %}{% endif %}
+            {% endif %}
+            {% set bi_sm = bi.start_month|default(proj_start_month)|int %}
+            {% set bi_sy = bi.start_year|default(proj_start_year)|int %}
+            {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
+            {% set bi_dur = bi.duration_months|default(1)|int %}
+            {% set bi_end = bi_offset + bi_dur %}
+            {% set _ = task_bi_data[tid].update({'min_offset': [task_bi_data[tid].min_offset, bi_offset]|min, 'max_end': [task_bi_data[tid].max_end, bi_end]|max}) %}
+        {% endfor %}
+
         {% set all_rows = [] %}
         {% for task in tasks %}
             {% set t_sm = task.start_month|default(proj_start_month)|int %}
             {% set t_sy = task.start_year|default(proj_start_year)|int %}
             {% set t_offset = (t_sy - proj_start_year) * 12 + (t_sm - proj_start_month) %}
             {% set t_dur = task.duration_months|default(1)|int %}
+            {% set tid = task.id|string %}
+            {% if tid in task_bi_data %}
+                {% set t_offset = task_bi_data[tid].min_offset %}
+                {% set t_dur = task_bi_data[tid].max_end - task_bi_data[tid].min_offset %}
+                {% if t_dur < 1 %}{% set t_dur = 1 %}{% endif %}
+            {% endif %}
             {% if all_rows.append({'name': task.name, 'offset': t_offset, 'duration': t_dur, 'is_indent': false, 'lead_entity': task.lead_entity|default(''), 'start_month': t_sm, 'start_year': t_sy}) %}{% endif %}
 
             {% for bi in budget_with_timing %}

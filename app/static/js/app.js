@@ -16,8 +16,12 @@ function saveCurrentTabData(proposalId) {
     const data = {};
     const summaryEl = document.getElementById('project-summary');
     const qualsEl = document.getElementById('qualifications-text');
+    const clientEl = document.getElementById('client-name');
+    const subtitleEl = document.getElementById('proposal-subtitle');
     if (summaryEl) data.project_summary = summaryEl.value;
     if (qualsEl) data.qualifications = qualsEl.value;
+    if (clientEl) data.client_name = clientEl.value;
+    if (subtitleEl) data.subtitle = subtitleEl.value;
 
     const indirectEl = document.getElementById('indirect-percent');
     if (indirectEl) data.indirect_percent = parseFloat(indirectEl.value) || 0;
@@ -135,7 +139,7 @@ function loadProposalList() {
             body.innerHTML = proposals.map(p => `
                 <div class="proposal-card" style="margin-bottom:8px;">
                     <h3 style="font-size:14px;">${p.title || 'Untitled'}</h3>
-                    <p style="font-size:12px;color:#64748b;">${p.client_name || 'No client'} &middot; ${p.updated_at ? p.updated_at.slice(0,10) : ''}</p>
+                    <p style="font-size:12px;color:#64748b;">${p.client_name || 'No funder'}${p.subtitle ? ' · ' + p.subtitle : ''} &middot; ${p.updated_at ? p.updated_at.slice(0,10) : ''}</p>
                     <div class="card-actions" style="margin-top:8px;">
                         <a href="/editor/${p.id}" class="btn btn-primary btn-sm">Edit</a>
                         <button class="btn btn-danger btn-sm" onclick="deleteProposal('${p.id}')">Delete</button>
@@ -302,4 +306,69 @@ function updateDarkModeLabel() {
         document.documentElement.setAttribute('data-theme', saved);
     }
     updateDarkModeLabel();
+})();
+
+window.addEventListener('beforeunload', function() {
+    const match = window.location.pathname.match(/\/editor\/([^/]+)/);
+    if (!match) return;
+    const proposalId = match[1];
+    const data = {};
+    const summaryEl = document.getElementById('project-summary');
+    const qualsEl = document.getElementById('qualifications-text');
+    const clientEl = document.getElementById('client-name');
+    const subtitleEl = document.getElementById('proposal-subtitle');
+    if (summaryEl) data.project_summary = summaryEl.value;
+    if (qualsEl) data.qualifications = qualsEl.value;
+    if (clientEl) data.client_name = clientEl.value;
+    if (subtitleEl) data.subtitle = subtitleEl.value;
+
+    const indirectEl = document.getElementById('indirect-percent');
+    if (indirectEl) data.indirect_percent = parseFloat(indirectEl.value) || 0;
+
+    const timelineInputs = document.getElementById('timeline-inputs');
+    if (timelineInputs) {
+        const useDays = document.getElementById('timeline-use-days')?.checked;
+        const startMonth = parseInt(document.getElementById('start-month')?.value) || 1;
+        const startYear = parseInt(document.getElementById('start-year')?.value) || 2025;
+        data.start_date = startYear + '-' + String(startMonth).padStart(2, '0') + '-01';
+        data.timeline_use_days = !!useDays;
+        data.timeline_show_budget = !!document.getElementById('timeline-show-budget')?.checked;
+        const saveTasks = [];
+        const budgetTimings = {};
+        timelineInputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(card => {
+            let duration = parseInt(card.querySelector('.duration-months').value) || 1;
+            if (useDays) duration = Math.ceil(duration / 30);
+            saveTasks.push({
+                id: card.dataset.taskId,
+                name: card.querySelector('.timeline-task-name')?.textContent?.trim() || '',
+                lead_entity: card.querySelector('.lead-entity')?.value || '',
+                start_month: parseInt(card.querySelector('.task-start-month')?.value) || startMonth,
+                start_year: parseInt(card.querySelector('.task-start-year')?.value) || startYear,
+                duration_months: duration
+            });
+            const subitems = card.nextElementSibling;
+            if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
+                subitems.querySelectorAll('.budget-timeline-item').forEach(sub => {
+                    let itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
+                    if (useDays) itemDuration = Math.ceil(itemDuration / 30);
+                    budgetTimings[sub.dataset.itemId] = {
+                        start_month: parseInt(sub.querySelector('.item-start-month')?.value) || startMonth,
+                        start_year: parseInt(sub.querySelector('.item-start-year')?.value) || startYear,
+                        duration_months: itemDuration
+                    };
+                });
+            }
+        });
+        data.tasks = saveTasks;
+        data.budget_item_timings = budgetTimings;
+    }
+
+    if (Object.keys(data).length > 0) {
+        fetch('/api/proposal/' + proposalId, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data),
+            keepalive: true
+        });
+    }
 })();

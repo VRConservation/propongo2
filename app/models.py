@@ -41,6 +41,7 @@ class Proposal:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str = "Untitled Proposal"
     client_name: str = ""
+    subtitle: str = ""
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
@@ -66,8 +67,11 @@ class Proposal:
         ensure_dirs()
         self.updated_at = datetime.now().isoformat()
         filepath = os.path.join(PROPOSALS_DIR, f"{self.id}.json")
-        with open(filepath, "w") as f:
+        tmp = filepath + ".tmp"
+        with open(tmp, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
+            f.write("\n")
+        os.replace(tmp, filepath)
 
     @classmethod
     def load(cls, proposal_id: str) -> "Proposal | None":

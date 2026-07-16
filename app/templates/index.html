@@ -21,7 +21,7 @@
             {% for p in proposals %}
             <div class="proposal-card">
                 <h3>{{ p.title }}</h3>
-                <p class="client-name">{{ p.client_name or "No client" }}</p>
+                <p class="client-name">{{ p.client_name or "No funder" }}{% if p.subtitle %} &middot; {{ p.subtitle }}{% endif %}</p>
                 <p class="updated">Updated: {{ p.updated_at[:10] if p.updated_at else "Never" }}</p>
                 <div class="card-actions">
                     <a href="/editor/{{ p.id }}" class="btn btn-primary btn-sm">Edit</a>

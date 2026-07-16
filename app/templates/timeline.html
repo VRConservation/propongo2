@@ -52,36 +52,11 @@
                 <div class="timeline-task-name">{{ task.name }}</div>
                 <div class="timeline-fields">
                     <div class="field-group">
-                        <label>Start</label>
-                        <select class="task-start-month" data-task-id="{{ task.id }}"
-                                onchange="autoSaveTimeline('{{ proposal.id }}')">
-                            {% for m in range(1, 13) %}
-                            <option value="{{ m }}" {{ 'selected' if m == task_start_month }}>{{ months[m-1][:3] }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="field-group">
-                        <label>&nbsp;</label>
-                        <select class="task-start-year" data-task-id="{{ task.id }}"
-                                onchange="autoSaveTimeline('{{ proposal.id }}')">
-                            {% for y in range(2024, 2031) %}
-                            <option value="{{ y }}" {{ 'selected' if y == task_start_year }}>{{ y }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="field-group">
                         <label>Lead</label>
                         <input type="text" min="0" max="24" value="{{ task.lead_entity|default('') }}"
                                class="lead-entity" data-task-id="{{ task.id }}"
                                placeholder="e.g. JS"
                                style="width:70px;text-align:center;"
-                               onchange="autoSaveTimeline('{{ proposal.id }}')"
-                               onkeyup="autoSaveTimeline('{{ proposal.id }}')">
-                    </div>
-                    <div class="field-group">
-                        <label class="duration-label">Duration (months)</label>
-                        <input type="number" min="1" max="60" value="{{ task.duration_months|default(1) }}"
-                               class="duration-months" data-task-id="{{ task.id }}"
                                onchange="autoSaveTimeline('{{ proposal.id }}')"
                                onkeyup="autoSaveTimeline('{{ proposal.id }}')">
                     </div>
@@ -166,34 +141,60 @@
     var projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
 
     var allTasks = [];
+    var taskBudgetMap = {};
+
+    inputs.querySelectorAll('.budget-timeline-item').forEach(function(sub) {
+        var taskId = sub.dataset.taskId;
+        if (!taskBudgetMap[taskId]) taskBudgetMap[taskId] = [];
+        var itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
+        if (useDays) itemDuration = Math.ceil(itemDuration / 30);
+        taskBudgetMap[taskId].push({
+            id: sub.dataset.itemId,
+            name: sub.querySelector('.timeline-task-name').textContent,
+            lead_entity: sub.querySelector('.lead-entity')?.value || '',
+            start_month: parseInt(sub.querySelector('.item-start-month')?.value) || projectStartMonth,
+            start_year: parseInt(sub.querySelector('.item-start-year')?.value) || projectStartYear,
+            duration_months: itemDuration,
+            is_budget: true
+        });
+    });
+
     inputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(function(card) {
-        var duration = parseInt(card.querySelector('.duration-months').value) || 1;
-        if (useDays) duration = Math.ceil(duration / 30);
+        var taskId = card.dataset.taskId;
+        var items = taskBudgetMap[taskId] || [];
+        var taskStartMonth = projectStartMonth;
+        var taskStartYear = projectStartYear;
+        var taskDuration = 1;
+
+        if (items.length > 0) {
+            var minOffset = Infinity, maxEnd = -Infinity;
+            items.forEach(function(item) {
+                var offset = (item.start_year - projectStartYear) * 12 + (item.start_month - projectStartMonth);
+                var end = offset + item.duration_months;
+                if (offset < minOffset) minOffset = offset;
+                if (end > maxEnd) maxEnd = end;
+            });
+            var absStart = projectStartMonth + minOffset - 1;
+            taskStartMonth = (absStart % 12) + 1;
+            taskStartYear = projectStartYear + Math.floor(absStart / 12);
+            taskDuration = maxEnd - minOffset;
+            if (taskDuration < 1) taskDuration = 1;
+        }
+
         allTasks.push({
-            id: card.dataset.taskId,
+            id: taskId,
             name: card.querySelector('.timeline-task-name').textContent,
             lead_entity: card.querySelector('.lead-entity')?.value || '',
-            start_month: parseInt(card.querySelector('.task-start-month')?.value) || projectStartMonth,
-            start_year: parseInt(card.querySelector('.task-start-year')?.value) || projectStartYear,
-            duration_months: duration
+            start_month: taskStartMonth,
+            start_year: taskStartYear,
+            duration_months: taskDuration
         });
+
         if (showBudget) {
             var subitems = card.nextElementSibling;
             if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
                 subitems.style.display = 'block';
-                subitems.querySelectorAll('.budget-timeline-item').forEach(function(sub) {
-                    var itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
-                    if (useDays) itemDuration = Math.ceil(itemDuration / 30);
-                    allTasks.push({
-                        id: sub.dataset.itemId,
-                        name: sub.querySelector('.timeline-task-name').textContent,
-                        lead_entity: sub.querySelector('.lead-entity')?.value || '',
-                        start_month: parseInt(sub.querySelector('.item-start-month')?.value) || projectStartMonth,
-                        start_year: parseInt(sub.querySelector('.item-start-year')?.value) || projectStartYear,
-                        duration_months: itemDuration,
-                        is_budget: true
-                    });
-                });
+                items.forEach(function(sub) { allTasks.push(sub); });
             }
         }
     });
