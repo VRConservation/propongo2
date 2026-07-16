@@ -4,38 +4,38 @@
   "client_name": "CALFIRE",
   "subtitle": "BWD",
   "created_at": "2026-07-16T10:36:23.446377",
-  "updated_at": "2026-07-16T12:03:29.901639",
-  "project_summary": "Slow-carb keffiyeh fernet red light therapy y2k enamel pin. Zines pitchfork rams varda vegan, jianbing chambray master cleanse leggings typewriter birkenstocks pork belly bluesky. Nduja sartorial cold plunge cortado reading series tinned fish dog dad wolf vaporware bauhaus kitsch. Vibe check freegan pinterest, supreme bone broth braun ramps stereolab rams scenester ice bath man braid austin bicycle rights. Wide-leg kickstarter la croix Brooklyn tattooed. Fam conservas master cleanse, garum dirtbag pop-up fernet ethical. Yorgos kale chips beard stussy, thrifted letterboxd vinyl capitalist realism.",
+  "updated_at": "2026-07-16T16:28:21.310011",
+  "project_summary": "### Background\nSlow-carb keffiyeh fernet red light therapy y2k enamel pin. Zines pitchfork rams varda vegan, jianbing chambray master cleanse leggings typewriter birkenstocks pork belly bluesky. Nduja sartorial cold plunge cortado reading series tinned fish dog dad wolf vaporware bauhaus kitsch. Vibe check freegan pinterest, supreme bone broth braun ramps stereolab rams scenester ice bath man braid austin bicycle rights. Wide-leg kickstarter la croix Brooklyn tattooed. Fam conservas master cleanse, garum dirtbag pop-up fernet ethical. Yorgos kale chips beard stussy, thrifted letterboxd vinyl capitalist realism.\n\n### Details\nSelfies pour-over 3 wolf moon deschooling wolf cut supper club van life. Migas sartorial tilde forage needle felting breadcrumbing hammock pothos cortado praxis doomscroll lynch. Carhartt crudo slugging coloring book, cliche single-origin coffee umami narwhal nduja moss wall deep v health goth sriracha pickled. Thrifted muji sriracha, leggings black garlic marxism bola\u00f1o visible mending beard. Tarkovsky chili crisp synth lyft fam gorpcore kickstarter jonas mekas +1 third place tote bag iykyk mixtape hipster runoff.",
   "tasks": [
     {
       "id": "60aae6d1",
       "name": "1. Scope",
       "lead_entity": "AB",
-      "start_month": 9,
+      "start_month": 7,
       "start_year": 2026,
       "duration_months": 3,
-      "description": "My desam conservas master cleanse."
+      "description": "Updated description"
     },
     {
+      "duration_months": 2,
       "id": "a3e87f78",
-      "name": "2. Data",
-      "description": "am conservas master cleanse",
       "lead_entity": "BR",
+      "name": "2. Data",
       "start_month": 9,
       "start_year": 2026,
-      "duration_months": 1
+      "description": "Yorgos kale chips beard stussy, thrifted letterboxd vinyl capitalist realism."
     },
     {
+      "duration_months": 2,
       "id": "7c64e28f",
-      "name": "3. Report",
-      "description": "am conservas master cleanse",
       "lead_entity": "",
+      "name": "3. Report",
       "start_month": 11,
       "start_year": 2026,
-      "duration_months": 1
+      "description": "Slow-carb keffiyeh fernet red light therapy y2k enamel pin. Zines pitchfork ram"
     }
   ],
-  "qualifications": "",
+  "qualifications": "Small batch ethical fixie, actually echo park meggings before they sold out disrupt. Yr sustainable whatever, artisan microdosing cred activated charcoal. Celiac dreamcatcher four loko, vinyl church-key helvetica sartorial. Gochujang banjo sustainable, food truck kinfolk aesthetic. Woke normcore literally cloud bread, jianbing ethical waistcoat. Hammock shoreditch microdosing, trust fund lo-fi post-ironic. Man braid literally drinking vinegar sustainable, cred lomo keytar.",
   "budget_items": [
     {
       "id": "d3d80b5f",
@@ -82,37 +82,43 @@
   ],
   "budget_item_timings": {
     "d3d80b5f": {
-      "start_month": 9,
+      "start_month": 7,
       "start_year": 2026,
-      "duration_months": 1
+      "duration_months": 1,
+      "lead_entity": ""
     },
     "a3fba8c9": {
-      "start_month": 10,
+      "start_month": 8,
       "start_year": 2026,
-      "duration_months": 1
+      "duration_months": 2,
+      "lead_entity": ""
     },
     "78d254c7": {
-      "start_month": 10,
-      "start_year": 2026,
-      "duration_months": 1
-    },
-    "3a951d43": {
-      "start_month": 11,
-      "start_year": 2026,
-      "duration_months": 1
-    },
-    "3012ae8d": {
-      "start_month": 12,
-      "start_year": 2026,
-      "duration_months": 2
-    },
-    "8a5fff6e": {
       "start_month": 9,
       "start_year": 2026,
-      "duration_months": 1
+      "duration_months": 1,
+      "lead_entity": ""
+    },
+    "3a951d43": {
+      "start_month": 10,
+      "start_year": 2026,
+      "duration_months": 1,
+      "lead_entity": ""
+    },
+    "3012ae8d": {
+      "start_month": 11,
+      "start_year": 2026,
+      "duration_months": 1,
+      "lead_entity": ""
+    },
+    "8a5fff6e": {
+      "start_month": 12,
+      "start_year": 2026,
+      "duration_months": 1,
+      "lead_entity": ""
     }
   },
-  "start_date": "2026-09-01",
+  "start_date": "2026-07-01",
   "indirect_percent": 10,
   "timeline_use_days": false,
   "timeline_show_budget": true

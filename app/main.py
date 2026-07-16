@@ -269,8 +269,17 @@ def create_app():
             return jsonify({"error": "Not found"}), 404
 
         task_budgets = {}
+        timings = proposal.budget_item_timings or {}
         for task in proposal.tasks:
             items = [b for b in proposal.budget_items if b.get("task_id") == task["id"]]
+            for item in items:
+                t = timings.get(item.get("id", ""), {})
+                if t:
+                    item["start_month"] = t.get("start_month")
+                    item["start_year"] = t.get("start_year")
+                    item["duration_months"] = t.get("duration_months", 1)
+                    if t.get("lead_entity"):
+                        item["lead_entity"] = t["lead_entity"]
             if items:
                 task_budgets[task["id"]] = {
                     "task": task,

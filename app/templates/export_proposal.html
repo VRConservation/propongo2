@@ -133,18 +133,17 @@
         }
         .timeline-chart-bar {
             height: 100%;
-            background: #2563eb;
+            background: #1d4ed8;
             border-radius: 3px;
             min-width: 3px;
         }
         .timeline-chart-dur {
-            position: absolute;
-            right: 6px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 7pt;
+            font-size: 8pt;
             font-weight: 600;
             color: #666;
+            white-space: nowrap;
+            margin-left: 8px;
+            min-width: 100px;
         }
         .timeline-chart-label-indent {
             padding-left: 24px;
@@ -152,7 +151,7 @@
             color: #666;
         }
         .timeline-chart-bar-indent {
-            background: #93c5fd;
+            background: #bfdbfe;
         }
     </style>
 </head>
@@ -202,13 +201,20 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in budget_items %}
+                {% for task in tasks %}
                 <tr>
-                    <td>{{ item.name }}</td>
+                    <td colspan="4" style="background:#f0f0f0;font-weight:600;">{{ task.name }}</td>
+                </tr>
+                {% for item in budget_items %}
+                    {% if item.task_id|string == task.id|string %}
+                <tr>
+                    <td style="padding-left:24px">{{ item.name }}</td>
                     <td style="text-align:right">{{ item.cost_per_unit|currency }}</td>
                     <td style="text-align:right">{{ item.units }}</td>
                     <td style="text-align:right">{{ (item.cost_per_unit * item.units)|currency }}</td>
                 </tr>
+                    {% endif %}
+                {% endfor %}
                 {% endfor %}
             </tbody>
             <tfoot>
@@ -306,7 +312,7 @@
             <div class="timeline-chart-row">
                 <div class="timeline-chart-label"{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</div>
                 <div class="timeline-chart-bar-track">
-                    <div class="timeline-chart-bar" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
+                    <div class="timeline-chart-bar{% if r.is_indent %} timeline-chart-bar-indent{% endif %}" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
                     <span class="timeline-chart-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} &middot; {{ r.duration }} mo</span>
                 </div>
             </div>

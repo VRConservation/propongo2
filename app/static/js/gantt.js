@@ -48,12 +48,10 @@ function autoSaveTimeline(proposalId) {
         const taskBudgetItems = {};
 
         inputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(card => {
-            const taskId = card.dataset.taskId;
-            taskBudgetItems[taskId] = [];
+            taskBudgetItems[card.dataset.taskId] = [];
         });
 
-        if (showBudget) {
-            inputs.querySelectorAll('.budget-timeline-item').forEach(sub => {
+        inputs.querySelectorAll('.budget-timeline-item').forEach(sub => {
                 const taskId = sub.dataset.taskId;
                 if (!taskBudgetItems[taskId]) taskBudgetItems[taskId] = [];
                 let itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
@@ -68,10 +66,10 @@ function autoSaveTimeline(proposalId) {
                 budgetTimings[sub.dataset.itemId] = {
                     start_month: itemStartMonth,
                     start_year: itemStartYear,
-                    duration_months: itemDuration
+                    duration_months: itemDuration,
+                    lead_entity: sub.querySelector('.lead-entity')?.value || ''
                 };
             });
-        }
 
         inputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(card => {
             const taskId = card.dataset.taskId;
@@ -133,49 +131,79 @@ function updateTimeline(proposalId) {
     const startDate = projectStartYear + '-' + String(projectStartMonth).padStart(2, '0') + '-01';
 
     const tasks = [];
+    const taskBudgetItems = {};
+
+    taskCards.forEach(card => {
+        taskBudgetItems[card.dataset.taskId] = [];
+    });
+
+    taskCards.forEach(card => {
+        const subitems = card.nextElementSibling;
+        if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
+            subitems.querySelectorAll('.budget-timeline-item').forEach(sub => {
+                const taskId = sub.dataset.taskId;
+                if (!taskBudgetItems[taskId]) taskBudgetItems[taskId] = [];
+                let itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
+                if (useDays) itemDuration = Math.ceil(itemDuration / 30);
+                const itemStartMonth = parseInt(sub.querySelector('.item-start-month')?.value) || projectStartMonth;
+                const itemStartYear = parseInt(sub.querySelector('.item-start-year')?.value) || projectStartYear;
+                taskBudgetItems[taskId].push({
+                    start_month: itemStartMonth,
+                    start_year: itemStartYear,
+                    duration_months: itemDuration,
+                    lead_entity: sub.querySelector('.lead-entity')?.value || '',
+                    name: sub.querySelector('.timeline-task-name').textContent,
+                    id: sub.dataset.itemId
+                });
+            });
+        }
+    });
 
     taskCards.forEach(card => {
         const taskId = card.dataset.taskId;
         const leadEntity = card.querySelector('.lead-entity')?.value || '';
-        let duration = parseInt(card.querySelector('.duration-months').value) || 1;
-        if (useDays) duration = Math.ceil(duration / 30);
+        const items = taskBudgetItems[taskId] || [];
 
-        const startMonth = parseInt(card.querySelector('.task-start-month')?.value) || projectStartMonth;
-        const startYear = parseInt(card.querySelector('.task-start-year')?.value) || projectStartYear;
+        let taskStartMonth = projectStartMonth;
+        let taskStartYear = projectStartYear;
+        let taskDuration = 1;
+
+        if (items.length > 0) {
+            let minOffset = Infinity, maxEnd = -Infinity;
+            items.forEach(item => {
+                const offset = (item.start_year - projectStartYear) * 12 + (item.start_month - projectStartMonth);
+                const end = offset + item.duration_months;
+                if (offset < minOffset) minOffset = offset;
+                if (end > maxEnd) maxEnd = end;
+            });
+            const absStart = projectStartMonth + minOffset - 1;
+            taskStartMonth = (absStart % 12) + 1;
+            taskStartYear = projectStartYear + Math.floor(absStart / 12);
+            taskDuration = maxEnd - minOffset;
+            if (taskDuration < 1) taskDuration = 1;
+        }
 
         tasks.push({
             id: taskId,
             name: card.querySelector('.timeline-task-name').textContent,
             lead_entity: leadEntity,
-            start_month: startMonth,
-            start_year: startYear,
-            duration_months: duration
+            start_month: taskStartMonth,
+            start_year: taskStartYear,
+            duration_months: taskDuration
         });
 
         if (showBudget) {
-            const subitems = card.nextElementSibling;
-            if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
-                subitems.querySelectorAll('.budget-timeline-item').forEach(sub => {
-                    const itemId = sub.dataset.itemId;
-                    const itemName = sub.querySelector('.timeline-task-name').textContent;
-                    const itemLead = sub.querySelector('.lead-entity')?.value || '';
-                    let itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
-                    if (useDays) itemDuration = Math.ceil(itemDuration / 30);
-
-                    const itemStartMonth = parseInt(sub.querySelector('.item-start-month')?.value) || startMonth;
-                    const itemStartYear = parseInt(sub.querySelector('.item-start-year')?.value) || startYear;
-
-                    tasks.push({
-                        id: 'budget_' + itemId,
-                        name: itemName,
-                        lead_entity: itemLead,
-                        start_month: itemStartMonth,
-                        start_year: itemStartYear,
-                        duration_months: itemDuration,
-                        is_budget: true
-                    });
+            items.forEach(item => {
+                tasks.push({
+                    id: 'budget_' + item.id,
+                    name: item.name,
+                    lead_entity: item.lead_entity,
+                    start_month: item.start_month,
+                    start_year: item.start_year,
+                    duration_months: item.duration_months,
+                    is_budget: true
                 });
-            }
+            });
         }
     });
 
@@ -194,7 +222,8 @@ function updateTimeline(proposalId) {
         budgetTimings[rawId] = {
             start_month: t.start_month,
             start_year: t.start_year,
-            duration_months: t.duration_months
+            duration_months: t.duration_months,
+            lead_entity: t.lead_entity
         };
     });
 

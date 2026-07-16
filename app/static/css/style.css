@@ -783,7 +783,7 @@ textarea {
     color: var(--text-muted);
 }
 
-.preview-timeline-bar-indent {
+.preview-timeline-bar.preview-timeline-bar-indent {
     background: #bfdbfe;
 }
 
@@ -962,7 +962,7 @@ textarea {
     color: var(--text-muted);
 }
 
-.gantt-bar-budget {
+.gantt-bar.gantt-bar-budget {
     background: #bfdbfe;
 }
 

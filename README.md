@@ -7,7 +7,7 @@ A local proposal generator for conservation and natural resource projects. Creat
 - **Scope of Work** - Define project summary, tasks, and deliverables
 - **Budget** - Line-item budgeting with cost/unit calculations and totals
 - **Qualifications** - Document team background and relevant experience
-- **Timeline** - Set lead times and durations per task with Gantt chart visualization
+- **Timeline** - Set lead times and durations per task with GANTT chart visualization
 - **Preview** - View the complete proposal before exporting
 - **PDF Export** - Clean, professional PDF output via WeasyPrint
 - **HTML Export** - Standalone HTML file with embedded styles

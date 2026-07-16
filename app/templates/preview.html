@@ -56,13 +56,20 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in budget_items %}
+                {% for task in tasks %}
                 <tr>
-                    <td>{{ item.name }}</td>
+                    <td colspan="4" style="background:var(--bg-secondary);font-weight:600;padding:8px 12px;">{{ task.name }}</td>
+                </tr>
+                {% for item in budget_items %}
+                    {% if item.task_id|string == task.id|string %}
+                <tr>
+                    <td style="padding-left:24px;">{{ item.name }}</td>
                     <td class="num-col">${{ item.cost_per_unit|currency }}</td>
                     <td class="num-col">{{ item.units|currency }}</td>
                     <td class="num-col">${{ (item.cost_per_unit * item.units)|currency }}</td>
                 </tr>
+                    {% endif %}
+                {% endfor %}
                 {% endfor %}
             </tbody>
             <tfoot>

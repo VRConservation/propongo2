@@ -90,7 +90,7 @@
                         </div>
                         <div class="field-group">
                             <label>Lead</label>
-                            <input type="text" value=""
+                            <input type="text" value="{{ item.lead_entity|default('') }}"
                                    class="lead-entity" data-item-id="{{ item.id }}"
                                    placeholder="e.g. JS"
                                    style="width:70px;text-align:center;"
