@@ -312,8 +312,9 @@
                 <div class="timeline-chart-label"{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</div>
                 <div class="timeline-chart-bar-track">
                     <div class="timeline-chart-bar{% if r.is_indent %} timeline-chart-bar-indent{% endif %}" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
-                    <span class="timeline-chart-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} &middot; {{ r.duration }} mo</span>
                 </div>
+                <span class="timeline-chart-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} · {{ r.duration }} mo</span>
+            </div>
             </div>
             {% endfor %}
         </div>
