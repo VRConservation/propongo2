@@ -5,14 +5,14 @@ A local proposal generator for conservation and natural resource projects. Creat
 ## Features
 
 - **Scope of Work** - Define project summary, tasks, and deliverables
-- **Budget** - Line-item budgeting with cost/unit calculations and totals
+- **Budget** - Line-item budgeting with cost/unit calculations, totals, and indirect costs
 - **Qualifications** - Document team background and relevant experience
-- **Timeline** - Set lead times and durations per task with GANTT chart visualization
-- **Preview** - View the complete proposal before exporting
+- **Timeline** - Auto-derived task timing from budget items with Gantt chart visualization
+- **Preview** - View the complete proposal with task-grouped budget and timeline bars
 - **PDF Export** - Clean, professional PDF output via WeasyPrint
 - **HTML Export** - Standalone HTML file with embedded styles
 - **Snippet Library** - Reusable markdown components for organization descriptions, deliverable templates, and custom content
-- **Save/Load** - Proposals stored as JSON files on disk, no database required
+- **Save/Load** - Proposals stored as JSON files on disk, auto-save as you work
 
 ## Quick Start
 
@@ -56,15 +56,15 @@ python run.py
 2. Enter a title and optional client name in the header
 3. Work through each tab:
 
-   **Scope** - Add a project summary, then create tasks/deliverables with descriptions
+   **Scope** - Add a project summary, then create tasks/deliverables with descriptions and a lead entity
 
-   **Budget** - Select a task, enter line items with cost per unit and quantities. Totals calculate automatically.
+   **Budget** - Select a task, enter line items with cost per unit and quantities. Totals and indirect costs calculate automatically.
 
    **Qualifications** - Describe your organization's background and why you're qualified for this project
 
-   **Timeline** - Set project start date, configure lead times and durations per task, then view the Gantt chart
+   **Timeline** - Set project start date and view the auto-derived Gantt chart. Adjust budget item timing and lead entities as needed.
 
-   **Preview** - Review the complete proposal before exporting
+   **Preview** - Review the complete proposal with task-grouped budget and timeline before exporting
 
 ### Using Snippets
 
@@ -112,21 +112,6 @@ pip install -e .
 pytest
 ```
 
-### Bump version
-
-```bash
-bump2version patch   # 0.1.0 -> 0.1.1
-bump2version minor   # 0.1.1 -> 0.2.0
-bump2version major   # 0.2.0 -> 1.0.0
-```
-
-### Publish to PyPI
-
-```bash
-python -m build
-twine upload dist/*
-```
-
 ## Project Structure
 
 ```
@@ -161,7 +146,8 @@ propongo2/
 │   │   ├── deliverables.json
 │   │   └── custom/             # User-created snippets
 │   └── data/
-│       └── proposals/          # Saved proposals (JSON)
+│       ├── proposals/          # Saved proposals (JSON)
+│       └── exports/            # Generated PDF/HTML exports
 └── tests/
     ├── test_main.py
     └── test_export.py

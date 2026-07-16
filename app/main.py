@@ -8,6 +8,7 @@ from markupsafe import Markup
 from .models import Proposal, PROPOSALS_DIR
 from .export import export_bp
 from .snippets import snippets_bp
+from . import __version__
 
 _proposal_locks = {}
 _proposal_locks_lock = threading.Lock()
@@ -97,6 +98,10 @@ def create_app():
 
     app.register_blueprint(export_bp)
     app.register_blueprint(snippets_bp)
+
+    @app.context_processor
+    def inject_version():
+        return {"app_version": __version__}
 
     app.jinja_env.filters["md"] = lambda text: Markup(markdown_to_html(text))
     app.jinja_env.filters["currency"] = lambda value: f"{value:,.0f}"
