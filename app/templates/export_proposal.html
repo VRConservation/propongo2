@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ proposal.title or "Proposal" }}</title>
     <style>
-        @page { size: portrait; @bottom-center { content: counter(page); } }
-        @page timeline { size: landscape; @bottom-center { content: counter(page); } }
+        @page { size: portrait; margin: 1.8cm; @bottom-center { content: counter(page); } }
+        @page timeline { size: landscape; margin: 1.5cm; @bottom-center { content: counter(page); } }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             font-size: 10pt;
-            line-height: 1.6;
+            line-height:1.4;
             color: #333;
             max-width: 800px;
             margin: 0 auto;
-            padding: 40px 60px;
+            padding: 40px 0;
         }
         .timeline-section {
             page: timeline;
@@ -72,17 +72,11 @@
         }
         th, td {
             text-align: left;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
+            padding: 4px 6px;
             font-variant-numeric: tabular-nums;
         }
         th {
-            background-color: #f5f5f5;
             font-weight: 600;
-        }
-        tfoot td {
-            font-weight: 600;
-            background-color: #f5f5f5;
         }
         .task-block {
             margin-bottom: 16px;
@@ -130,13 +124,15 @@
             margin-bottom: 2px;
         }
         .timeline-chart-label {
-            min-width: 100px;
-            max-width: 100px;
-            font-size: 7pt;
+            min-width: 70px;
+            max-width: 70px;
+            font-size: 6pt;
             font-weight: 500;
-            padding-right: 8px;
+            padding-right: 4px;
             flex-shrink: 0;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .timeline-chart-cells {
             display: flex;
@@ -214,70 +210,56 @@
     </div>
     {% endif %}
 
-    {% if tasks %}
-    <div class="section-block">
-        <h2>Scope of Work</h2>
-        {% for task in tasks %}
-        <div class="task-block">
-            <h3>{{ task.name }}</h3>
-            {% if task.description %}
-            {{ task.description|md }}
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
     {% if budget_items %}
     <div class="section-block">
         <h2>Budget</h2>
-        <table style="font-size:9pt;">
+        <table style="font-size:8pt;border-collapse:collapse;">
             <thead>
                 <tr>
-                    <th>Item</th>
-                    <th style="text-align:right">Cost/Unit</th>
-                    <th style="text-align:right">Units</th>
-                    <th style="text-align:right">Total</th>
+                    <th style="text-align:left;padding:4px 6px;background:#f0f0f0;font-weight:600;">Item</th>
+                    <th style="text-align:right;padding:4px 6px;background:#f0f0f0;font-weight:600;">Cost/Unit</th>
+                    <th style="text-align:right;padding:4px 6px;background:#f0f0f0;font-weight:600;">Units</th>
+                    <th style="text-align:right;padding:4px 6px;background:#f0f0f0;font-weight:600;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 {% for task in tasks %}
+                {% set ns = namespace(total=0) %}
+                {% for item in budget_items %}
+                    {% if item.task_id|string == task.id|string %}
+                        {% set ns.total = ns.total + item.cost_per_unit * item.units %}
+                    {% endif %}
+                {% endfor %}
                 <tr>
-                    <td colspan="4" style="background:#f0f0f0;font-weight:600;font-size:9pt;">{{ task.name }}</td>
+                    <td colspan="3" style="font-weight:600;padding:4px 6px;">{{ task.name }}</td>
+                    <td style="text-align:right;font-weight:600;padding:4px 6px;">{{ ns.total|currency }}</td>
                 </tr>
                 {% for item in budget_items %}
                     {% if item.task_id|string == task.id|string %}
                 <tr>
-                    <td style="padding-left:24px;font-weight:400;">{{ item.name }}</td>
-                    <td style="text-align:right;font-weight:400;">{{ item.cost_per_unit|currency }}</td>
-                    <td style="text-align:right;font-weight:400;">{{ item.units }}</td>
-                    <td style="text-align:right;font-weight:400;">{{ (item.cost_per_unit * item.units)|currency }}</td>
+                    <td style="padding:2px 6px 2px 20px;font-weight:400;">{{ item.name }}</td>
+                    <td style="text-align:right;padding:2px 6px;font-weight:400;">{{ item.cost_per_unit|currency }}</td>
+                    <td style="text-align:right;padding:2px 6px;font-weight:400;">{{ item.units|int }}</td>
+                    <td style="text-align:right;padding:2px 6px;font-weight:400;">{{ (item.cost_per_unit * item.units)|currency }}</td>
                 </tr>
                     {% endif %}
                 {% endfor %}
                 {% endfor %}
-            </tbody>
-            <tfoot>
                 <tr>
-                    <td colspan="3" style="font-weight:600;">Subtotal</td>
-                    <td style="text-align:right;font-weight:600;">${{ total_budget|currency }}</td>
+                    <td colspan="3" style="font-weight:600;padding:4px 6px;border-top:1.5px solid #333;">Subtotal</td>
+                    <td style="text-align:right;font-weight:600;padding:4px 6px;border-top:1.5px solid #333;">{{ total_budget|currency }}</td>
                 </tr>
                 {% if indirect_percent is defined and indirect_percent > 0 %}
                 <tr>
-                    <td colspan="3" style="font-weight:400;">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
-                    <td style="text-align:right;font-weight:400;">{{ indirect_amount|currency }}</td>
-                </tr>
-                <tr>
-                    <td colspan="3" style="font-weight:600;">Total</td>
-                    <td style="text-align:right;font-weight:600;">${{ total_with_indirect|currency }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="3" style="font-weight:600;">Total</td>
-                    <td style="text-align:right;font-weight:600;">${{ total_budget|currency }}</td>
+                    <td colspan="3" style="padding:2px 6px;">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
+                    <td style="text-align:right;padding:2px 6px;">{{ indirect_amount|currency }}</td>
                 </tr>
                 {% endif %}
-            </tfoot>
+                <tr>
+                    <td colspan="3" style="font-weight:600;padding:4px 6px;">Total</td>
+                    <td style="text-align:right;font-weight:600;padding:4px 6px;">${{ total_with_indirect|currency }}</td>
+                </tr>
+            </tbody>
         </table>
     </div>
     {% endif %}
@@ -344,7 +326,7 @@
             {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
             {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
             <div class="timeline-chart-row">
-                <div class="timeline-chart-label"{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</div>
+                <div class="timeline-chart-label"{% if r.is_indent %} style="padding-left:16px"{% endif %}>{{ r.name }}</div>
                 <div class="timeline-chart-cells timeline-chart-data-cells">
                     <div class="timeline-chart-bar{% if r.is_indent %} timeline-chart-bar-indent{% endif %}" style="position:absolute;left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
                 </div>

@@ -712,7 +712,6 @@ textarea {
 .preview-timeline-table th,
 .preview-timeline-table td {
     padding: 8px 12px;
-    border: 1px solid var(--border);
     text-align: left;
 }
 
@@ -720,10 +719,6 @@ textarea {
 .preview-budget-table td.num-col {
     text-align: right;
     font-variant-numeric: tabular-nums;
-}
-
-.preview-budget-table tfoot .total-row td {
-    border-top: 2px solid var(--border);
 }
 
 .preview-budget-table th,
@@ -748,13 +743,15 @@ textarea {
 }
 
 .preview-timeline-label {
-    min-width: 120px;
-    max-width: 120px;
-    font-size: 11px;
+    min-width: 90px;
+    max-width: 90px;
+    font-size: 10px;
     font-weight: 500;
-    padding-right: 10px;
+    padding-right: 6px;
     flex-shrink: 0;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .preview-timeline-cells {
@@ -799,9 +796,9 @@ textarea {
 }
 
 .preview-timeline-row-indent .preview-timeline-label {
-    padding-left: 24px;
+    padding-left: 16px;
     font-weight: 400;
-    font-size: 13px;
+    font-size: 10px;
     color: var(--text-muted);
 }
 
@@ -1313,17 +1310,6 @@ textarea {
 
 [data-theme="dark"] .preview-budget-table th, [data-theme="dark"] .preview-timeline-table th {
     background: var(--surface-alt);
-}
-
-[data-theme="dark"] .preview-budget-table th,
-[data-theme="dark"] .preview-budget-table td,
-[data-theme="dark"] .preview-timeline-table th,
-[data-theme="dark"] .preview-timeline-table td {
-    border-color: var(--border);
-}
-
-[data-theme="dark"] .preview-budget-table tfoot .total-row td {
-    border-color: var(--border);
 }
 
 [data-theme="dark"] .modal-content {
