@@ -9,7 +9,7 @@ class Config:
     # Server settings
     HOST = os.environ.get('HOST', '0.0.0.0')
     PORT = int(os.environ.get('PORT', 5000))
-    DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
+    DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
     
     # Security
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', os.urandom(24).hex())

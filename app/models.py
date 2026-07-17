@@ -57,6 +57,7 @@ class Proposal:
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
     project_summary: str = ""
+    scope: str = ""
     tasks: list = field(default_factory=list)
     qualifications: str = ""
 

@@ -15,10 +15,12 @@ function activateTab(btn) {
 function saveCurrentTabData(proposalId) {
     const data = {};
     const summaryEl = document.getElementById('project-summary');
+    const scopeEl = document.getElementById('project-scope');
     const qualsEl = document.getElementById('qualifications-text');
     const clientEl = document.getElementById('client-name');
     const subtitleEl = document.getElementById('proposal-subtitle');
     if (summaryEl) data.project_summary = summaryEl.value;
+    if (scopeEl) data.scope = scopeEl.value;
     if (qualsEl) data.qualifications = qualsEl.value;
     if (clientEl) data.client_name = clientEl.value;
     if (subtitleEl) data.subtitle = subtitleEl.value;
@@ -484,10 +486,12 @@ window.addEventListener('beforeunload', function() {
     const proposalId = match[1];
     const data = {};
     const summaryEl = document.getElementById('project-summary');
+    const scopeEl = document.getElementById('project-scope');
     const qualsEl = document.getElementById('qualifications-text');
     const clientEl = document.getElementById('client-name');
     const subtitleEl = document.getElementById('proposal-subtitle');
     if (summaryEl) data.project_summary = summaryEl.value;
+    if (scopeEl) data.scope = scopeEl.value;
     if (qualsEl) data.qualifications = qualsEl.value;
     if (clientEl) data.client_name = clientEl.value;
     if (subtitleEl) data.subtitle = subtitleEl.value;
@@ -575,4 +579,4 @@ window.addEventListener('beforeunload', function() {
             keepalive: true
         });
     }
-})();
+});

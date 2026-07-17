@@ -8,7 +8,7 @@
                   hx-trigger="keyup changed delay:1000ms, change"
                   hx-put="/api/proposal/{{ proposal.id }}"
                   hx-encoding="json"
-                  hx-vals='js:{"qualifications": document.getElementById("qualifications-text").value}'>{{ proposal.qualifications }}</textarea>
+                  hx-vals='{"qualifications": "JS(document.getElementById(\'qualifications-text\').value)"}'>{{ proposal.qualifications }}</textarea>
     </div>
 
     <div class="callout callout-info">

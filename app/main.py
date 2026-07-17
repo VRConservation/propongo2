@@ -2,12 +2,13 @@
 
 import json
 import os
+import re
 import math
 import uuid
 import logging
 import threading
 from typing import Any, Optional, Tuple
-from weakref import WeakValueDictionary
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, Response
 from markupsafe import Markup
 import markdown
@@ -25,7 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_proposal_locks = WeakValueDictionary()
+_proposal_locks = {}
 _proposal_locks_lock = threading.Lock()
 
 
@@ -184,7 +185,7 @@ def create_app() -> Flask:
         new_id = re.sub(r"[^a-z0-9_-]", "_", title.lower())
         new_id = re.sub(r"_+", "_", new_id).strip("_")
         if not new_id:
-            new_id = _uuid.uuid4().hex[:8]
+            new_id = uuid.uuid4().hex[:8]
 
         original_id = new_id
         counter = 1
@@ -196,12 +197,16 @@ def create_app() -> Flask:
         new_proposal.client_name = proposal.client_name
         new_proposal.subtitle = getattr(proposal, 'subtitle', '') or ''
         new_proposal.project_summary = proposal.project_summary
+        new_proposal.scope = getattr(proposal, 'scope', '') or ''
         new_proposal.tasks = list(proposal.tasks)
         new_proposal.qualifications = proposal.qualifications
         new_proposal.budget_items = list(proposal.budget_items)
         new_proposal.budget_item_timings = dict(proposal.budget_item_timings) if proposal.budget_item_timings else {}
         new_proposal.start_date = proposal.start_date
         new_proposal.indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+        new_proposal.custom_sections = list(proposal.custom_sections) if proposal.custom_sections else []
+        new_proposal.timeline_use_days = proposal.timeline_use_days
+        new_proposal.timeline_show_budget = proposal.timeline_show_budget
         new_proposal.save()
 
         return jsonify({"id": new_id}), 201
@@ -558,8 +563,9 @@ def create_app() -> Flask:
 
 def run_server() -> None:
     """Run the development server."""
+    import logging as _logging
+    _logging.getLogger("werkzeug").setLevel(_logging.WARNING)
     app = create_app()
-    logger.info(f"Starting server on {Config.HOST}:{Config.PORT}")
     app.run(debug=Config.DEBUG, host=Config.HOST, port=Config.PORT)
 
 

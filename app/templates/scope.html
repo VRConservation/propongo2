@@ -33,6 +33,16 @@
     </div>
 
     <div class="form-group">
+        <label for="project-scope">Scope</label>
+        <textarea id="project-scope" rows="5"
+                  placeholder="Describe the scope of work, deliverables, and boundaries..."
+                  hx-trigger="keyup changed delay:1000ms, change"
+                  hx-put="/api/proposal/{{ proposal.id }}"
+                  hx-encoding="json"
+                  hx-vals='{"scope": "JS(document.getElementById(\'project-scope\').value)"}'>{{ proposal.scope }}</textarea>
+    </div>
+
+    <div class="form-group">
         <label>Tasks / Deliverables</label>
         <div id="task-list">
             {% for task in tasks %}
