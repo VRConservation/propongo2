@@ -53,3 +53,4 @@ htmlcov/
 # data/proposals/*.json
 # data/exports/*
 bump.md
+features.md

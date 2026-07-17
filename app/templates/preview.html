@@ -99,6 +99,15 @@
     </div>
     {% endif %}
 
+    {% if proposal.custom_sections %}
+        {% for section in proposal.custom_sections | sort(attribute='order') %}
+    <div class="form-group">
+        <h3>{{ section.title }}</h3>
+        <div style="font-size:14px;line-height:1.7;">{{ section.content | md }}</div>
+    </div>
+        {% endfor %}
+    {% endif %}
+
     {% if tasks %}
     <div class="form-group">
         <h3>Timeline</h3>

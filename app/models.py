@@ -55,6 +55,7 @@ class Proposal:
     indirect_percent: float = 0.0
     timeline_use_days: bool = False
     timeline_show_budget: bool = False
+    custom_sections: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)

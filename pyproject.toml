@@ -28,6 +28,9 @@ dependencies = [
     "weasyprint>=60.0",
     "markdown>=3.5",
     "python-docx>=1.0",
+    "pandas>=2.0",
+    "openpyxl>=3.0",
+    "tabulate>=0.9",
 ]
 
 [project.optional-dependencies]

@@ -311,6 +311,144 @@ def create_app():
             task_budgets=task_budgets,
         )
 
+    @app.route("/custom-sections/<proposal_id>")
+    def custom_sections_tab(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+        sections = sorted(
+            getattr(proposal, 'custom_sections', []),
+            key=lambda s: s.get("order", 0)
+        )
+        return render_template(
+            "custom_sections.html",
+            proposal=proposal,
+            sections=sections
+        )
+
+    @app.route("/api/section/<proposal_id>", methods=["POST"])
+    def add_section(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        new_section = {
+            "id": str(_uuid.uuid4()),
+            "title": data.get("title", "New Section"),
+            "content": data.get("content", ""),
+            "order": len(getattr(proposal, 'custom_sections', []))
+        }
+        if not hasattr(proposal, 'custom_sections') or proposal.custom_sections is None:
+            proposal.custom_sections = []
+        proposal.custom_sections.append(new_section)
+        proposal.save()
+        return jsonify(new_section), 201
+
+    @app.route("/api/section/<proposal_id>/<section_id>", methods=["PUT"])
+    def update_section(proposal_id, section_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        sections = getattr(proposal, 'custom_sections', [])
+        for section in sections:
+            if section["id"] == section_id:
+                section.update({
+                    "title": data.get("title", section["title"]),
+                    "content": data.get("content", section["content"]),
+                    "order": data.get("order", section.get("order", 0))
+                })
+                break
+
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/section/<proposal_id>/<section_id>", methods=["DELETE"])
+    def delete_section(proposal_id, section_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        sections = getattr(proposal, 'custom_sections', [])
+        proposal.custom_sections = [
+            s for s in sections if s["id"] != section_id
+        ]
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/section/<proposal_id>/import-excel", methods=["POST"])
+    def import_excel_section(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({"error": "Only Excel files (.xlsx, .xls) are supported"}), 400
+
+        try:
+            import pandas as pd
+            import io
+
+            # Read Excel file
+            excel_data = file.read()
+            excel_file = io.BytesIO(excel_data)
+            df = pd.read_excel(excel_file, engine='openpyxl' if file.filename.endswith('.xlsx') else 'xlrd')
+
+            # Convert DataFrame to markdown table
+            markdown_content = df.to_markdown(index=False)
+
+            # Create new section with Excel data
+            new_section = {
+                "id": str(_uuid.uuid4()),
+                "title": request.form.get('title', file.filename),
+                "content": markdown_content,
+                "order": len(getattr(proposal, 'custom_sections', []))
+            }
+
+            if not hasattr(proposal, 'custom_sections') or proposal.custom_sections is None:
+                proposal.custom_sections = []
+            proposal.custom_sections.append(new_section)
+            proposal.save()
+
+            return jsonify(new_section), 201
+
+        except ImportError:
+            return jsonify({"error": "Excel support not installed. Install pandas and openpyxl."}), 500
+        except Exception as e:
+            return jsonify({"error": f"Failed to import Excel: {str(e)}"}), 500
+
+    @app.route("/api/section/<proposal_id>/reorder", methods=["PUT"])
+    def reorder_sections(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        section_order = data.get('section_order', [])
+
+        sections = getattr(proposal, 'custom_sections', [])
+        section_dict = {s['id']: s for s in sections}
+
+        reordered = []
+        for idx, section_id in enumerate(section_order):
+            if section_id in section_dict:
+                section = section_dict[section_id]
+                section['order'] = idx
+                reordered.append(section)
+
+        proposal.custom_sections = reordered
+        proposal.save()
+        return jsonify({"ok": True})
+
     @app.route("/preview/<proposal_id>")
     def preview_tab(proposal_id):
         proposal = Proposal.load(proposal_id)

@@ -248,6 +248,15 @@
     </div>
     {% endif %}
 
+    {% if proposal.custom_sections %}
+        {% for section in proposal.custom_sections | sort(attribute='order') %}
+    <div class="section-block">
+        <h2>{{ section.title }}</h2>
+        {{ section.content | md }}
+    </div>
+        {% endfor %}
+    {% endif %}
+
     {% if tasks %}
     <div class="section-block">
         <h2>Timeline</h2>

@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Custom Sections** - Add unlimited custom sections to proposals with Markdown formatting
+- **Excel Import** - Import Excel spreadsheets (.xlsx, .xls) as formatted tables into custom sections
+- Live Markdown preview for custom section content
+- Section reordering with up/down buttons
+- Custom sections appear in PDF and HTML exports
+- New dependencies: pandas, openpyxl, tabulate for Excel support
+
+### Changed
+- Added "Custom Sections" tab to proposal editor
+- Updated export templates to include custom sections
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

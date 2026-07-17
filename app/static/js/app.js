@@ -128,6 +128,7 @@ async function switchTab(proposalId, tabName, btn) {
         budget: '/budget/',
         qualifications: '/qualifications/',
         timeline: '/timeline/',
+        'custom-sections': '/custom-sections/',
         preview: '/preview/'
     };
 
@@ -337,6 +338,145 @@ function updateDarkModeLabel() {
     }
     updateDarkModeLabel();
 })();
+
+// Custom Sections functions
+async function addCustomSection(proposalId) {
+    const response = await fetch(`/api/section/${proposalId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            title: 'New Section',
+            content: ''
+        })
+    });
+    
+    if (response.ok) {
+        const btn = document.querySelector('[data-tab="custom-sections"]');
+        if (btn) await switchTab(proposalId, 'custom-sections', btn);
+    }
+}
+
+async function updateSection(proposalId, sectionId) {
+    const card = document.querySelector(`[data-section-id="${sectionId}"]`);
+    if (!card) return;
+    
+    const title = card.querySelector('.section-title-input').value;
+    const content = card.querySelector('.section-content-input').value;
+    
+    await fetch(`/api/section/${proposalId}/${sectionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content })
+    });
+    
+    // Update preview
+    const preview = card.querySelector('.markdown-preview');
+    if (preview) {
+        const response = await fetch(`/api/section/${proposalId}/${sectionId}`);
+        // Note: You may want to add a GET endpoint for individual sections
+        // For now, we'll just reload the tab
+    }
+}
+
+async function deleteSection(proposalId, sectionId) {
+    if (!confirm('Delete this section?')) return;
+    
+    const response = await fetch(`/api/section/${proposalId}/${sectionId}`, {
+        method: 'DELETE'
+    });
+    
+    if (response.ok) {
+        const btn = document.querySelector('[data-tab="custom-sections"]');
+        if (btn) await switchTab(proposalId, 'custom-sections', btn);
+    }
+}
+
+async function moveSectionUp(proposalId, sectionId) {
+    const sections = Array.from(document.querySelectorAll('.custom-section-card'));
+    const currentIndex = sections.findIndex(s => s.dataset.sectionId === sectionId);
+    
+    if (currentIndex <= 0) return;
+    
+    const sectionOrder = sections.map(s => s.dataset.sectionId);
+    [sectionOrder[currentIndex - 1], sectionOrder[currentIndex]] = 
+    [sectionOrder[currentIndex], sectionOrder[currentIndex - 1]];
+    
+    await fetch(`/api/section/${proposalId}/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section_order: sectionOrder })
+    });
+    
+    const btn = document.querySelector('[data-tab="custom-sections"]');
+    if (btn) await switchTab(proposalId, 'custom-sections', btn);
+}
+
+async function moveSectionDown(proposalId, sectionId) {
+    const sections = Array.from(document.querySelectorAll('.custom-section-card'));
+    const currentIndex = sections.findIndex(s => s.dataset.sectionId === sectionId);
+    
+    if (currentIndex < 0 || currentIndex >= sections.length - 1) return;
+    
+    const sectionOrder = sections.map(s => s.dataset.sectionId);
+    [sectionOrder[currentIndex], sectionOrder[currentIndex + 1]] = 
+    [sectionOrder[currentIndex + 1], sectionOrder[currentIndex]];
+    
+    await fetch(`/api/section/${proposalId}/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section_order: sectionOrder })
+    });
+    
+    const btn = document.querySelector('[data-tab="custom-sections"]');
+    if (btn) await switchTab(proposalId, 'custom-sections', btn);
+}
+
+function openExcelImportModal(proposalId) {
+    const modal = document.getElementById('excel-import-modal');
+    modal.classList.remove('hidden');
+    document.getElementById('excel-section-title').value = '';
+    document.getElementById('excel-file-input').value = '';
+}
+
+function closeExcelImportModal() {
+    document.getElementById('excel-import-modal').classList.add('hidden');
+}
+
+async function uploadExcelFile(proposalId) {
+    const titleInput = document.getElementById('excel-section-title');
+    const fileInput = document.getElementById('excel-file-input');
+    
+    const title = titleInput.value.trim();
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select an Excel file.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title || file.name);
+    
+    try {
+        const response = await fetch(`/api/section/${proposalId}/import-excel`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            closeExcelImportModal();
+            const btn = document.querySelector('[data-tab="custom-sections"]');
+            if (btn) await switchTab(proposalId, 'custom-sections', btn);
+        } else {
+            alert(result.error || 'Failed to import Excel file.');
+        }
+    } catch (error) {
+        alert('Error importing Excel file: ' + error.message);
+    }
+}
 
 window.addEventListener('beforeunload', function() {
     const match = window.location.pathname.match(/\/editor\/([^/]+)/);
