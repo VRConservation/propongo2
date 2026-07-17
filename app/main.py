@@ -7,6 +7,7 @@ import math
 import uuid
 import logging
 import threading
+from datetime import datetime
 from typing import Any, Optional, Tuple
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, Response
@@ -204,6 +205,8 @@ def create_app() -> Flask:
         new_proposal.budget_item_timings = dict(proposal.budget_item_timings) if proposal.budget_item_timings else {}
         new_proposal.start_date = proposal.start_date
         new_proposal.indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+        new_proposal.show_budget_description = getattr(proposal, 'show_budget_description', False)
+        new_proposal.budget_description = getattr(proposal, 'budget_description', '') or ''
         new_proposal.custom_sections = list(proposal.custom_sections) if proposal.custom_sections else []
         new_proposal.timeline_use_days = proposal.timeline_use_days
         new_proposal.timeline_show_budget = proposal.timeline_show_budget
@@ -285,13 +288,12 @@ def create_app() -> Flask:
                     "items": items,
                 }
 
-        from datetime import datetime as _dt
         try:
-            sd = _dt.strptime(proposal.start_date, "%Y-%m-%d")
+            sd = datetime.strptime(proposal.start_date, "%Y-%m-%d")
             start_date_month = sd.month
             start_date_year = sd.year
         except (ValueError, TypeError):
-            now = _dt.now()
+            now = datetime.now()
             start_date_month = now.month
             start_date_year = now.year
 
@@ -470,8 +472,13 @@ def create_app() -> Flask:
             "id": uuid.uuid4().hex[:8],
             "name": data.get("name", ""),
             "description": data.get("description", ""),
-            "lead_months": data.get("lead_months", 0),
+            "start_month": data.get("start_month", 1),
+            "start_year": data.get("start_year", datetime.now().year),
             "duration_months": data.get("duration_months", 1),
+            "lead_months": data.get("lead_months", 0),
+            "lead_entity": data.get("lead_entity", ""),
+            "recurring": data.get("recurring", False),
+            "recurring_interval": data.get("recurring_interval", 3),
         }
         proposal.tasks.append(task)
         proposal.save()
@@ -486,7 +493,7 @@ def create_app() -> Flask:
         proposal.tasks = [t for t in proposal.tasks if t.get("id") != task_id]
         proposal.budget_items = [b for b in proposal.budget_items if b.get("task_id") != task_id]
         proposal.save()
-        return jsonify({"ok": True})
+        return "", 200
 
     @app.route("/api/budget/<proposal_id>", methods=["POST"])
     def add_budget_item(proposal_id):

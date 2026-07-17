@@ -12,6 +12,48 @@ function activateTab(btn) {
     btn.classList.add('active');
 }
 
+function countWords(text) {
+    const trimmed = text.trim();
+    return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+function updateWordCount(textareaId, labelId) {
+    const el = document.getElementById(textareaId);
+    const label = document.getElementById(labelId);
+    if (!el || !label) return;
+    const base = label.dataset.baseLabel;
+    const count = countWords(el.value);
+    label.textContent = base + (count > 0 ? ' (' + count + ')' : '');
+}
+
+function initWordCounts() {
+    document.querySelectorAll('[data-word-count]').forEach(el => {
+        const textareaId = el.dataset.wordCount;
+        const textarea = document.getElementById(textareaId);
+        if (textarea) {
+            textarea.addEventListener('input', () => updateWordCount(textareaId, el.id));
+            updateWordCount(textareaId, el.id);
+        }
+    });
+}
+
+function saveTextareaHeights() {
+    document.querySelectorAll('#tab-content textarea[id]').forEach(el => {
+        if (el.id && el.style.height) {
+            localStorage.setItem('ta_height_' + el.id, el.style.height);
+        }
+    });
+}
+
+function restoreTextareaHeights() {
+    document.querySelectorAll('#tab-content textarea[id]').forEach(el => {
+        if (el.id) {
+            const saved = localStorage.getItem('ta_height_' + el.id);
+            if (saved) el.style.height = saved;
+        }
+    });
+}
+
 function saveCurrentTabData(proposalId) {
     const data = {};
     const summaryEl = document.getElementById('project-summary');
@@ -27,6 +69,11 @@ function saveCurrentTabData(proposalId) {
 
     const indirectEl = document.getElementById('indirect-percent');
     if (indirectEl) data.indirect_percent = parseFloat(indirectEl.value) || 0;
+
+    const budgetDescEl = document.getElementById('budget-description');
+    const showBudgetDescEl = document.getElementById('show-budget-description');
+    if (showBudgetDescEl) data.show_budget_description = showBudgetDescEl.checked;
+    if (budgetDescEl) data.budget_description = budgetDescEl.value;
 
     const taskList = document.getElementById('task-list');
     if (taskList) {
@@ -135,6 +182,7 @@ async function switchTab(proposalId, tabName, btn) {
     };
 
     await saveCurrentTabData(proposalId);
+    saveTextareaHeights();
 
     const response = await fetch(routes[tabName] + proposalId + '?t=' + Date.now());
     const html = await response.text();
@@ -146,6 +194,13 @@ async function switchTab(proposalId, tabName, btn) {
     document.querySelectorAll('#tab-content [hx-trigger]').forEach(el => {
         htmx.process(el);
     });
+
+    initWordCounts();
+    restoreTextareaHeights();
+
+    if (tabName === 'timeline') {
+        autoInitGantt();
+    }
 }
 
 function exportProposal(proposalId, format) {
@@ -499,6 +554,11 @@ window.addEventListener('beforeunload', function() {
     const indirectEl = document.getElementById('indirect-percent');
     if (indirectEl) data.indirect_percent = parseFloat(indirectEl.value) || 0;
 
+    const budgetDescEl = document.getElementById('budget-description');
+    const showBudgetDescEl = document.getElementById('show-budget-description');
+    if (showBudgetDescEl) data.show_budget_description = showBudgetDescEl.checked;
+    if (budgetDescEl) data.budget_description = budgetDescEl.value;
+
     const timelineInputs = document.getElementById('timeline-inputs');
     if (timelineInputs) {
         const useDays = document.getElementById('timeline-use-days')?.checked;
@@ -579,4 +639,15 @@ window.addEventListener('beforeunload', function() {
             keepalive: true
         });
     }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    initWordCounts();
+    restoreTextareaHeights();
+
+    document.addEventListener('resize', function(e) {
+        if (e.target.tagName === 'TEXTAREA' && e.target.id) {
+            localStorage.setItem('ta_height_' + e.target.id, e.target.style.height);
+        }
+    }, true);
 });

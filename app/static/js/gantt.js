@@ -17,16 +17,108 @@ function toggleBudgetInTimeline() {
     });
 }
 
+function autoInitGantt() {
+    const inputs = document.getElementById('timeline-inputs');
+    if (!inputs) return;
+
+    const useDays = document.getElementById('timeline-use-days')?.checked;
+    const showBudget = document.getElementById('timeline-show-budget')?.checked;
+    ganttUseDays = useDays;
+    const projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
+    const projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
+
+    document.querySelectorAll('.budget-timeline-subitems').forEach(el => {
+        el.style.display = 'block';
+    });
+
+    const allTasks = [];
+    const taskBudgetMap = {};
+
+    inputs.querySelectorAll('.budget-timeline-item').forEach(function(sub) {
+        const taskId = sub.dataset.taskId;
+        if (!taskBudgetMap[taskId]) taskBudgetMap[taskId] = [];
+        let itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
+        if (useDays) itemDuration = Math.ceil(itemDuration / 30);
+        taskBudgetMap[taskId].push({
+            id: sub.dataset.itemId,
+            name: sub.querySelector('.timeline-task-name').textContent,
+            lead_entity: sub.querySelector('.lead-entity')?.value || '',
+            start_month: parseInt(sub.querySelector('.item-start-month')?.value) || projectStartMonth,
+            start_year: parseInt(sub.querySelector('.item-start-year')?.value) || projectStartYear,
+            duration_months: itemDuration,
+            recurring: !!sub.querySelector('.item-recurring')?.checked,
+            recurring_interval: parseInt(sub.querySelector('.item-recurring-interval')?.value) || 3,
+            is_budget: true
+        });
+    });
+
+    inputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(function(card) {
+        const taskId = card.dataset.taskId;
+        const items = taskBudgetMap[taskId] || [];
+        let taskStartMonth = projectStartMonth;
+        let taskStartYear = projectStartYear;
+        let taskDuration = 1;
+
+        if (items.length > 0) {
+            let minOffset = Infinity, maxEnd = -Infinity;
+            items.forEach(function(item) {
+                const offset = (item.start_year - projectStartYear) * 12 + (item.start_month - projectStartMonth);
+                const end = offset + item.duration_months;
+                if (offset < minOffset) minOffset = offset;
+                if (end > maxEnd) maxEnd = end;
+            });
+            const absStart = projectStartMonth + minOffset - 1;
+            taskStartMonth = (absStart % 12) + 1;
+            taskStartYear = projectStartYear + Math.floor(absStart / 12);
+            taskDuration = maxEnd - minOffset;
+            if (taskDuration < 1) taskDuration = 1;
+        }
+
+        const recurring = !!card.querySelector('.task-recurring')?.checked;
+        const recurringInterval = parseInt(card.querySelector('.task-recurring-interval')?.value) || 3;
+
+        allTasks.push({
+            id: taskId,
+            name: card.querySelector('.timeline-task-name').textContent,
+            lead_entity: card.querySelector('.lead-entity')?.value || '',
+            start_month: taskStartMonth,
+            start_year: taskStartYear,
+            duration_months: taskDuration,
+            recurring: recurring,
+            recurring_interval: recurringInterval
+        });
+
+        items.forEach(function(sub) { allTasks.push(sub); });
+    });
+
+    if (allTasks.length > 0) {
+        renderGantt(allTasks);
+    }
+}
+
+function toggleItemRecurring(checkbox) {
+    const wrapper = checkbox.closest('.timeline-input-card').querySelector('.item-recurring-interval-wrapper');
+    if (wrapper) wrapper.style.display = checkbox.checked ? '' : 'none';
+}
+
+function toggleTaskRecurring(checkbox) {
+    const wrapper = checkbox.closest('.timeline-input-card').querySelector('.task-recurring-interval-wrapper');
+    if (wrapper) wrapper.style.display = checkbox.checked ? '' : 'none';
+}
+
 function updateStartDate(proposalId) {
-    const month = document.getElementById('start-month').value;
-    const year = document.getElementById('start-year').value;
+    const month = parseInt(document.getElementById('start-month').value);
+    const year = parseInt(document.getElementById('start-year').value);
     const startDate = year + '-' + String(month).padStart(2, '0') + '-01';
 
-    fetch('/api/proposal/' + proposalId, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ start_date: startDate })
+    document.querySelectorAll('.item-start-month').forEach(sel => {
+        sel.value = month;
     });
+    document.querySelectorAll('.item-start-year').forEach(sel => {
+        sel.value = year;
+    });
+
+    autoSaveTimeline(proposalId);
 }
 
 let autoSaveTimelineTimer = null;
@@ -42,6 +134,13 @@ function autoSaveTimeline(proposalId) {
         const projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
         const projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
         const startDate = projectStartYear + '-' + String(projectStartMonth).padStart(2, '0') + '-01';
+
+        document.querySelectorAll('.item-start-month').forEach(sel => {
+            sel.value = projectStartMonth;
+        });
+        document.querySelectorAll('.item-start-year').forEach(sel => {
+            sel.value = projectStartYear;
+        });
 
         const saveTasks = [];
         const budgetTimings = {};
@@ -67,7 +166,9 @@ function autoSaveTimeline(proposalId) {
                     start_month: itemStartMonth,
                     start_year: itemStartYear,
                     duration_months: itemDuration,
-                    lead_entity: sub.querySelector('.lead-entity')?.value || ''
+                    lead_entity: sub.querySelector('.lead-entity')?.value || '',
+                    recurring: !!sub.querySelector('.item-recurring')?.checked,
+                    recurring_interval: parseInt(sub.querySelector('.item-recurring-interval')?.value) || 3
                 };
             });
 
@@ -102,7 +203,9 @@ function autoSaveTimeline(proposalId) {
                 lead_entity: leadEntity,
                 start_month: taskStartMonth,
                 start_year: taskStartYear,
-                duration_months: taskDuration
+                duration_months: taskDuration,
+                recurring: !!card.querySelector('.task-recurring')?.checked,
+                recurring_interval: parseInt(card.querySelector('.task-recurring-interval')?.value) || 3
             });
         });
 
@@ -153,7 +256,9 @@ function updateTimeline(proposalId) {
                     duration_months: itemDuration,
                     lead_entity: sub.querySelector('.lead-entity')?.value || '',
                     name: sub.querySelector('.timeline-task-name').textContent,
-                    id: sub.dataset.itemId
+                    id: sub.dataset.itemId,
+                    recurring: !!sub.querySelector('.item-recurring')?.checked,
+                    recurring_interval: parseInt(sub.querySelector('.item-recurring-interval')?.value) || 3
                 });
             });
         }
@@ -189,7 +294,9 @@ function updateTimeline(proposalId) {
             lead_entity: leadEntity,
             start_month: taskStartMonth,
             start_year: taskStartYear,
-            duration_months: taskDuration
+            duration_months: taskDuration,
+            recurring: !!card.querySelector('.task-recurring')?.checked,
+            recurring_interval: parseInt(card.querySelector('.task-recurring-interval')?.value) || 3
         });
 
         if (showBudget) {
@@ -201,6 +308,8 @@ function updateTimeline(proposalId) {
                     start_month: item.start_month,
                     start_year: item.start_year,
                     duration_months: item.duration_months,
+                    recurring: item.recurring,
+                    recurring_interval: item.recurring_interval,
                     is_budget: true
                 });
             });
@@ -213,7 +322,9 @@ function updateTimeline(proposalId) {
         lead_entity: t.lead_entity,
         start_month: t.start_month,
         start_year: t.start_year,
-        duration_months: t.duration_months
+        duration_months: t.duration_months,
+        recurring: t.recurring,
+        recurring_interval: t.recurring_interval
     }));
 
     const budgetTimings = {};
@@ -223,7 +334,9 @@ function updateTimeline(proposalId) {
             start_month: t.start_month,
             start_year: t.start_year,
             duration_months: t.duration_months,
-            lead_entity: t.lead_entity
+            lead_entity: t.lead_entity,
+            recurring: t.recurring,
+            recurring_interval: t.recurring_interval
         };
     });
 
@@ -313,15 +426,55 @@ function renderGantt(tasks) {
         }
     });
 
+    const expandedTasks = [];
     tasks.forEach(task => {
         const lead = monthsBetween(projectStartYear, projectStartMonth, task.start_year, task.start_month);
-        let duration = task.duration_months || 1;
+        const duration = task.duration_months || 1;
+        const isBudget = task.is_budget;
+        const recurring = task.recurring;
+        const interval = task.recurring_interval || 3;
+
+        if (recurring && !isBudget) {
+            let offset = lead;
+            while (offset < maxMonths) {
+                expandedTasks.push({
+                    ...task,
+                    _offset: offset,
+                    _duration: duration,
+                    _isRepeat: offset !== lead
+                });
+                offset += interval;
+            }
+        } else if (recurring && isBudget) {
+            let offset = lead;
+            while (offset < maxMonths) {
+                expandedTasks.push({
+                    ...task,
+                    _offset: offset,
+                    _duration: duration,
+                    _isRepeat: offset !== lead
+                });
+                offset += interval;
+            }
+        } else {
+            expandedTasks.push({
+                ...task,
+                _offset: lead,
+                _duration: duration,
+                _isRepeat: false
+            });
+        }
+    });
+
+    expandedTasks.forEach(task => {
+        const taskLead = task._offset;
+        let duration = task._duration;
         const entityLabel = task.lead_entity ? ` (${task.lead_entity})` : '';
         const isBudget = task.is_budget;
 
-        if (!isBudget && taskItems[task.id] && taskItems[task.id].length > 0) {
-            let minOffset = lead + duration;
-            let maxEnd = lead;
+        if (!isBudget && !task._isRepeat && taskItems[task.id] && taskItems[task.id].length > 0) {
+            let minOffset = taskLead + duration;
+            let maxEnd = taskLead;
             taskItems[task.id].forEach(item => {
                 const itemLead = monthsBetween(projectStartYear, projectStartMonth, item.start_year, item.start_month);
                 const itemEnd = itemLead + (item.duration_months || 1);
@@ -330,17 +483,15 @@ function renderGantt(tasks) {
             });
             duration = maxEnd - minOffset;
             if (duration < 1) duration = 1;
-            var taskLead = minOffset;
-        } else {
-            var taskLead = lead;
         }
 
         const rowClass = isBudget ? 'gantt-row gantt-row-budget' : 'gantt-row';
         const labelClass = isBudget ? 'gantt-row-label gantt-row-label-budget' : 'gantt-row-label';
         const barClass = isBudget ? 'gantt-bar gantt-bar-budget' : 'gantt-bar';
+        const label = task._isRepeat ? `${task.name} (repeat)` : `${task.name}${entityLabel}`;
 
         rowsHTML += `<div class="${rowClass}">
-            <div class="${labelClass}">${task.name}${entityLabel}</div>
+            <div class="${labelClass}">${label}</div>
             <div class="gantt-bar-container">`;
 
         for (let i = 0; i < maxMonths; i++) {

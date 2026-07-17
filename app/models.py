@@ -65,6 +65,8 @@ class Proposal:
     budget_item_timings: dict = field(default_factory=dict)
     start_date: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
     indirect_percent: float = 0.0
+    show_budget_description: bool = False
+    budget_description: str = ""
     timeline_use_days: bool = False
     timeline_show_budget: bool = False
     custom_sections: list = field(default_factory=list)

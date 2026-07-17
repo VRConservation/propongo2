@@ -60,6 +60,26 @@
                                onchange="autoSaveTimeline('{{ proposal.id }}')"
                                onkeyup="autoSaveTimeline('{{ proposal.id }}')">
                     </div>
+                    <div class="field-group">
+                        <label class="toggle-label" style="font-size:12px;">
+                            <input type="checkbox" class="task-recurring" data-task-id="{{ task.id }}"
+                                   {{ 'checked' if task.recurring }}
+                                   onchange="autoSaveTimeline('{{ proposal.id }}')">
+                            Recurring
+                        </label>
+                    </div>
+                    <div class="field-group task-recurring-interval-wrapper" data-task-id="{{ task.id }}"
+                         style="{{ '' if task.recurring else 'display:none' }}">
+                        <label>Every</label>
+                        <select class="task-recurring-interval" data-task-id="{{ task.id }}"
+                                onchange="autoSaveTimeline('{{ proposal.id }}')">
+                            {% set ri = task.recurring_interval|default(3)|int %}
+                            <option value="1" {{ 'selected' if ri == 1 }}>Monthly</option>
+                            <option value="3" {{ 'selected' if ri == 3 }}>Quarterly</option>
+                            <option value="6" {{ 'selected' if ri == 6 }}>Semi-annually</option>
+                            <option value="12" {{ 'selected' if ri == 12 }}>Annually</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             {% if task.id in task_budgets %}
@@ -104,6 +124,26 @@
                                    onchange="autoSaveTimeline('{{ proposal.id }}')"
                                    onkeyup="autoSaveTimeline('{{ proposal.id }}')">
                         </div>
+                        <div class="field-group">
+                            <label class="toggle-label" style="font-size:12px;">
+                                <input type="checkbox" class="item-recurring" data-item-id="{{ item.id }}"
+                                       {{ 'checked' if item.recurring }}
+                                       onchange="toggleItemRecurring(this); autoSaveTimeline('{{ proposal.id }}')">
+                                Recurring
+                            </label>
+                        </div>
+                        <div class="field-group item-recurring-interval-wrapper" data-item-id="{{ item.id }}"
+                             style="{{ '' if item.recurring else 'display:none' }}">
+                            <label>Every</label>
+                            <select class="item-recurring-interval" data-item-id="{{ item.id }}"
+                                    onchange="autoSaveTimeline('{{ proposal.id }}')">
+                                {% set ri = item.recurring_interval|default(3)|int %}
+                                <option value="1" {{ 'selected' if ri == 1 }}>Monthly</option>
+                                <option value="3" {{ 'selected' if ri == 3 }}>Quarterly</option>
+                                <option value="6" {{ 'selected' if ri == 6 }}>Semi-annually</option>
+                                <option value="12" {{ 'selected' if ri == 12 }}>Annually</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
@@ -127,80 +167,3 @@
     </div>
     {% endif %}
 </div>
-
-<script>
-(function() {
-    var proposalId = '{{ proposal.id }}';
-    var inputs = document.getElementById('timeline-inputs');
-    if (!inputs) return;
-
-    var useDays = document.getElementById('timeline-use-days')?.checked;
-    var showBudget = document.getElementById('timeline-show-budget')?.checked;
-    ganttUseDays = useDays;
-    var projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
-    var projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
-
-    var allTasks = [];
-    var taskBudgetMap = {};
-
-    inputs.querySelectorAll('.budget-timeline-item').forEach(function(sub) {
-        var taskId = sub.dataset.taskId;
-        if (!taskBudgetMap[taskId]) taskBudgetMap[taskId] = [];
-        var itemDuration = parseInt(sub.querySelector('.duration-months').value) || 1;
-        if (useDays) itemDuration = Math.ceil(itemDuration / 30);
-        taskBudgetMap[taskId].push({
-            id: sub.dataset.itemId,
-            name: sub.querySelector('.timeline-task-name').textContent,
-            lead_entity: sub.querySelector('.lead-entity')?.value || '',
-            start_month: parseInt(sub.querySelector('.item-start-month')?.value) || projectStartMonth,
-            start_year: parseInt(sub.querySelector('.item-start-year')?.value) || projectStartYear,
-            duration_months: itemDuration,
-            is_budget: true
-        });
-    });
-
-    inputs.querySelectorAll('.timeline-input-card:not(.budget-timeline-item)').forEach(function(card) {
-        var taskId = card.dataset.taskId;
-        var items = taskBudgetMap[taskId] || [];
-        var taskStartMonth = projectStartMonth;
-        var taskStartYear = projectStartYear;
-        var taskDuration = 1;
-
-        if (items.length > 0) {
-            var minOffset = Infinity, maxEnd = -Infinity;
-            items.forEach(function(item) {
-                var offset = (item.start_year - projectStartYear) * 12 + (item.start_month - projectStartMonth);
-                var end = offset + item.duration_months;
-                if (offset < minOffset) minOffset = offset;
-                if (end > maxEnd) maxEnd = end;
-            });
-            var absStart = projectStartMonth + minOffset - 1;
-            taskStartMonth = (absStart % 12) + 1;
-            taskStartYear = projectStartYear + Math.floor(absStart / 12);
-            taskDuration = maxEnd - minOffset;
-            if (taskDuration < 1) taskDuration = 1;
-        }
-
-        allTasks.push({
-            id: taskId,
-            name: card.querySelector('.timeline-task-name').textContent,
-            lead_entity: card.querySelector('.lead-entity')?.value || '',
-            start_month: taskStartMonth,
-            start_year: taskStartYear,
-            duration_months: taskDuration
-        });
-
-        if (showBudget) {
-            var subitems = card.nextElementSibling;
-            if (subitems && subitems.classList.contains('budget-timeline-subitems')) {
-                subitems.style.display = 'block';
-                items.forEach(function(sub) { allTasks.push(sub); });
-            }
-        }
-    });
-
-    if (allTasks.length > 0) {
-        renderGantt(allTasks);
-    }
-})();
-</script>

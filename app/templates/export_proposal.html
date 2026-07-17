@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ proposal.title or "Proposal" }}</title>
     <style>
+        @page { size: portrait; @bottom-center { content: counter(page); } }
+        @page timeline { size: landscape; @bottom-center { content: counter(page); } }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -14,6 +16,15 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 40px 60px;
+        }
+        .timeline-section {
+            page: timeline;
+            page-break-before: always;
+            max-width: none;
+            padding: 30px 40px;
+        }
+        .timeline-chart-bar-track {
+            height: 16px;
         }
         .doc-header {
             text-align: center;
@@ -105,8 +116,9 @@
             margin-top: 40px;
             padding-top: 16px;
             border-top: 1px solid #ddd;
-            text-align: center;
-            font-size: 9pt;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8pt;
             color: #999;
         }
         .timeline-chart {
@@ -152,6 +164,19 @@
         .timeline-chart-bar-indent {
             background: #bfdbfe;
         }
+        .timeline-chart-header .timeline-chart-bar-track {
+            display: flex;
+            height: auto;
+            background: none;
+        }
+        .timeline-chart-month-label {
+            flex: 1;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            padding: 2px 0;
+            border-left: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
@@ -173,6 +198,13 @@
     </div>
     {% endif %}
 
+    {% if proposal.scope %}
+    <div class="section-block">
+        <h2>Scope</h2>
+        {{ proposal.scope|md }}
+    </div>
+    {% endif %}
+
     {% if tasks %}
     <div class="section-block">
         <h2>Scope of Work</h2>
@@ -190,7 +222,7 @@
     {% if budget_items %}
     <div class="section-block">
         <h2>Budget</h2>
-        <table>
+        <table style="font-size:9pt;">
             <thead>
                 <tr>
                     <th>Item</th>
@@ -202,15 +234,15 @@
             <tbody>
                 {% for task in tasks %}
                 <tr>
-                    <td colspan="4" style="background:#f0f0f0;font-weight:600;">{{ task.name }}</td>
+                    <td colspan="4" style="background:#f0f0f0;font-weight:600;font-size:9pt;">{{ task.name }}</td>
                 </tr>
                 {% for item in budget_items %}
                     {% if item.task_id|string == task.id|string %}
                 <tr>
-                    <td style="padding-left:24px">{{ item.name }}</td>
-                    <td style="text-align:right">{{ item.cost_per_unit|currency }}</td>
-                    <td style="text-align:right">{{ item.units }}</td>
-                    <td style="text-align:right">{{ (item.cost_per_unit * item.units)|currency }}</td>
+                    <td style="padding-left:24px;font-weight:400;">{{ item.name }}</td>
+                    <td style="text-align:right;font-weight:400;">{{ item.cost_per_unit|currency }}</td>
+                    <td style="text-align:right;font-weight:400;">{{ item.units }}</td>
+                    <td style="text-align:right;font-weight:400;">{{ (item.cost_per_unit * item.units)|currency }}</td>
                 </tr>
                     {% endif %}
                 {% endfor %}
@@ -218,22 +250,22 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="3"><strong>Subtotal</strong></td>
-                    <td style="text-align:right"><strong>${{ total_budget|currency }}</strong></td>
+                    <td colspan="3" style="font-weight:600;">Subtotal</td>
+                    <td style="text-align:right;font-weight:600;">${{ total_budget|currency }}</td>
                 </tr>
                 {% if indirect_percent is defined and indirect_percent > 0 %}
                 <tr>
-                    <td colspan="3">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
-                    <td style="text-align:right">{{ indirect_amount|currency }}</td>
+                    <td colspan="3" style="font-weight:400;">Indirect ({{ "%.1f"|format(indirect_percent) }}%)</td>
+                    <td style="text-align:right;font-weight:400;">{{ indirect_amount|currency }}</td>
                 </tr>
                 <tr>
-                    <td colspan="3"><strong>Total</strong></td>
-                    <td style="text-align:right"><strong>${{ total_with_indirect|currency }}</strong></td>
+                    <td colspan="3" style="font-weight:600;">Total</td>
+                    <td style="text-align:right;font-weight:600;">${{ total_with_indirect|currency }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="3"><strong>Total</strong></td>
-                    <td style="text-align:right"><strong>${{ total_budget|currency }}</strong></td>
+                    <td colspan="3" style="font-weight:600;">Total</td>
+                    <td style="text-align:right;font-weight:600;">${{ total_budget|currency }}</td>
                 </tr>
                 {% endif %}
             </tfoot>
@@ -258,50 +290,12 @@
     {% endif %}
 
     {% if tasks %}
-    <div class="section-block">
+    <div class="section-block timeline-section">
         <h2>Timeline</h2>
         {% set proj_start_month = proposal.start_date[5:7]|int if proposal.start_date and proposal.start_date|length >= 7 else 1 %}
         {% set proj_start_year = proposal.start_date[:4]|int if proposal.start_date and proposal.start_date|length >= 4 else 2025 %}
         {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
-
-        {% set task_bi_data = {} %}
-        {% for bi in budget_with_timing %}
-            {% set tid = bi.task_id|string %}
-            {% if tid not in task_bi_data %}
-                {% if task_bi_data.update({tid: {'min_offset': 9999, 'max_end': 0}}) %}{% endif %}
-            {% endif %}
-            {% set bi_sm = bi.start_month|default(proj_start_month)|int %}
-            {% set bi_sy = bi.start_year|default(proj_start_year)|int %}
-            {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
-            {% set bi_dur = bi.duration_months|default(1)|int %}
-            {% set bi_end = bi_offset + bi_dur %}
-            {% set _ = task_bi_data[tid].update({'min_offset': [task_bi_data[tid].min_offset, bi_offset]|min, 'max_end': [task_bi_data[tid].max_end, bi_end]|max}) %}
-        {% endfor %}
-
-        {% set all_rows = [] %}
-        {% for task in tasks %}
-            {% set t_sm = task.start_month|default(proj_start_month)|int %}
-            {% set t_sy = task.start_year|default(proj_start_year)|int %}
-            {% set t_offset = (t_sy - proj_start_year) * 12 + (t_sm - proj_start_month) %}
-            {% set t_dur = task.duration_months|default(1)|int %}
-            {% set tid = task.id|string %}
-            {% if tid in task_bi_data %}
-                {% set t_offset = task_bi_data[tid].min_offset %}
-                {% set t_dur = task_bi_data[tid].max_end - task_bi_data[tid].min_offset %}
-                {% if t_dur < 1 %}{% set t_dur = 1 %}{% endif %}
-            {% endif %}
-            {% if all_rows.append({'name': task.name, 'offset': t_offset, 'duration': t_dur, 'is_indent': false, 'lead_entity': task.lead_entity|default(''), 'start_month': t_sm, 'start_year': t_sy}) %}{% endif %}
-
-            {% for bi in budget_with_timing %}
-                {% if bi.task_id == task.id %}
-                    {% set bi_sm = bi.start_month|default(t_sm)|int %}
-                    {% set bi_sy = bi.start_year|default(t_sy)|int %}
-                    {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
-                    {% set bi_dur = bi.duration_months|default(1)|int %}
-                    {% if all_rows.append({'name': bi.name, 'offset': bi_offset, 'duration': bi_dur, 'is_indent': true, 'lead_entity': '', 'start_month': bi_sm, 'start_year': bi_sy}) %}{% endif %}
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
+        {% set quarter_names = ['Q1','Q2','Q3','Q4'] %}
 
         {% set max_end = 0 %}
         {% for r in all_rows %}
@@ -310,10 +304,63 @@
         {% endfor %}
         {% set total_project_months = [max_end, 12]|max %}
 
+        {% if timeline_granularity == "years" %}
+            {% set num_cols = ((total_project_months + 11) // 12) %}
+            {% set num_cols = [num_cols, 10]|min %}
+        {% elif timeline_granularity == "quarters" %}
+            {% set num_cols = ((total_project_months + 2) // 3) %}
+            {% set num_cols = [num_cols, 16]|min %}
+        {% else %}
+            {% set num_cols = total_project_months %}
+        {% endif %}
+
         <div class="timeline-chart">
+            <div class="timeline-chart-row timeline-chart-header">
+                <div class="timeline-chart-label"></div>
+                <div class="timeline-chart-bar-track">
+                    {% if timeline_granularity == "years" %}
+                        {% for y in range(num_cols) %}
+                        {% set abs_y = proj_start_year + y %}
+                        <div class="timeline-chart-month-label" style="font-weight:600;">{{ abs_y }}</div>
+                        {% endfor %}
+                    {% elif timeline_granularity == "quarters" %}
+                        {% for q in range(num_cols) %}
+                        {% set q_month_offset = q * 3 %}
+                        {% set abs_m = proj_start_month + q_month_offset - 1 %}
+                        {% set abs_y = proj_start_year + (abs_m // 12) %}
+                        {% set abs_m_1based = (abs_m % 12) + 1 %}
+                        {% set q_idx = ((abs_m_1based - 1) // 3) %}
+                        {% set show_year = (q == 0) or (abs_m_1based == 1) %}
+                        <div class="timeline-chart-month-label"{% if show_year %} style="font-weight:600;"{% endif %}>
+                            {% if show_year %}{{ quarter_names[q_idx] }} {{ abs_y }}{% else %}{{ quarter_names[q_idx] }}{% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        {% for m_offset in range(num_cols) %}
+                        {% set abs_m = proj_start_month + m_offset - 1 %}
+                        {% set abs_y = proj_start_year + (abs_m // 12) %}
+                        {% set abs_m_1based = (abs_m % 12) + 1 %}
+                        {% set show_year = (m_offset == 0) or (abs_m_1based == 1) %}
+                        <div class="timeline-chart-month-label"{% if show_year %} style="font-weight:600;"{% endif %}>
+                            {% if show_year %}{{ month_names[abs_m_1based - 1] }} {{ abs_y }}{% else %}{{ month_names[abs_m_1based - 1] }}{% endif %}
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
             {% for r in all_rows %}
-            {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
-            {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
+            {% if timeline_granularity == "years" %}
+                {% set bar_offset = (r.offset // 12) %}
+                {% set bar_width = ((r.duration + 11) // 12) %}
+            {% elif timeline_granularity == "quarters" %}
+                {% set bar_offset = (r.offset // 3) %}
+                {% set bar_width = ((r.duration + 2) // 3) %}
+            {% else %}
+                {% set bar_offset = r.offset %}
+                {% set bar_width = r.duration %}
+            {% endif %}
+            {% set left_pct = (bar_offset / num_cols * 100)|round(1) if num_cols > 0 else 0 %}
+            {% set width_pct = (bar_width / num_cols * 100)|round(1) if num_cols > 0 else 100 %}
             {% set abs_sm = proj_start_month + r.offset - 1 %}
             {% set abs_sy = proj_start_year + (abs_sm // 12) %}
             {% set abs_sm_1based = (abs_sm % 12) + 1 %}
@@ -322,8 +369,7 @@
                 <div class="timeline-chart-bar-track">
                     <div class="timeline-chart-bar{% if r.is_indent %} timeline-chart-bar-indent{% endif %}" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
                 </div>
-                <span class="timeline-chart-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} · {{ r.duration }} mo</span>
-            </div>
+                <span class="timeline-chart-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} &middot; {{ r.duration }} mo</span>
             </div>
             {% endfor %}
         </div>
@@ -354,7 +400,8 @@
     {% endif %}
 
     <div class="footer">
-        Generated by Propongo 2
+        <span>{{ proposal.title or "Proposal" }}</span>
+        <span>Page <span class="page-number"></span></span>
     </div>
 </body>
 </html>

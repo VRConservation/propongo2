@@ -2,6 +2,19 @@ function formatCurrency(num) {
     return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+function toggleBudgetDescription() {
+    const checked = document.getElementById('show-budget-description').checked;
+    document.getElementById('budget-description-wrapper').style.display = checked ? '' : 'none';
+    const match = window.location.pathname.match(/\/editor\/([^/]+)/);
+    if (match) {
+        fetch('/api/proposal/' + match[1], {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ show_budget_description: checked })
+        });
+    }
+}
+
 function deleteBudgetItem(proposalId, itemId, btn) {
     if (!confirm('Delete this budget item?')) return;
     fetch('/api/budget/' + proposalId + '/' + itemId, { method: 'DELETE' })

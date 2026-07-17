@@ -26,6 +26,13 @@
     </div>
     {% endif %}
 
+    {% if proposal.scope %}
+    <div class="form-group">
+        <h3>Scope</h3>
+        <div style="font-size:14px;line-height:1.7;">{{ proposal.scope|md }}</div>
+    </div>
+    {% endif %}
+
     {% if tasks %}
     <div class="form-group">
         <h3>Scope of Work</h3>
@@ -92,6 +99,13 @@
     </div>
     {% endif %}
 
+    {% if proposal.show_budget_description and proposal.budget_description %}
+    <div class="form-group">
+        <h3>Budget Description</h3>
+        <div style="font-size:14px;line-height:1.7;">{{ proposal.budget_description|md }}</div>
+    </div>
+    {% endif %}
+
     {% if proposal.qualifications %}
     <div class="form-group">
         <h3>Qualifications</h3>
@@ -115,45 +129,6 @@
         {% set proj_start_year = proposal.start_date[:4]|int if proposal.start_date and proposal.start_date|length >= 4 else 2025 %}
         {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
 
-        {% set task_bi_data = {} %}
-        {% for bi in budget_with_timing %}
-            {% set tid = bi.task_id|string %}
-            {% if tid not in task_bi_data %}
-                {% if task_bi_data.update({tid: {'min_offset': 9999, 'max_end': 0}}) %}{% endif %}
-            {% endif %}
-            {% set bi_sm = bi.start_month|default(proj_start_month)|int %}
-            {% set bi_sy = bi.start_year|default(proj_start_year)|int %}
-            {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
-            {% set bi_dur = bi.duration_months|default(1)|int %}
-            {% set bi_end = bi_offset + bi_dur %}
-            {% set _ = task_bi_data[tid].update({'min_offset': [task_bi_data[tid].min_offset, bi_offset]|min, 'max_end': [task_bi_data[tid].max_end, bi_end]|max}) %}
-        {% endfor %}
-
-        {% set all_rows = [] %}
-        {% for task in tasks %}
-            {% set t_sm = task.start_month|default(proj_start_month)|int %}
-            {% set t_sy = task.start_year|default(proj_start_year)|int %}
-            {% set t_offset = (t_sy - proj_start_year) * 12 + (t_sm - proj_start_month) %}
-            {% set t_dur = task.duration_months|default(1)|int %}
-            {% set tid = task.id|string %}
-            {% if tid in task_bi_data %}
-                {% set t_offset = task_bi_data[tid].min_offset %}
-                {% set t_dur = task_bi_data[tid].max_end - task_bi_data[tid].min_offset %}
-                {% if t_dur < 1 %}{% set t_dur = 1 %}{% endif %}
-            {% endif %}
-            {% if all_rows.append({'name': task.name, 'offset': t_offset, 'duration': t_dur, 'is_indent': false, 'lead_entity': task.lead_entity|default(''), 'start_month': t_sm, 'start_year': t_sy}) %}{% endif %}
-
-            {% for bi in budget_with_timing %}
-                {% if bi.task_id == task.id %}
-                    {% set bi_sm = bi.start_month|default(t_sm)|int %}
-                    {% set bi_sy = bi.start_year|default(t_sy)|int %}
-                    {% set bi_offset = (bi_sy - proj_start_year) * 12 + (bi_sm - proj_start_month) %}
-                    {% set bi_dur = bi.duration_months|default(1)|int %}
-                    {% if all_rows.append({'name': bi.name, 'offset': bi_offset, 'duration': bi_dur, 'is_indent': true, 'lead_entity': '', 'start_month': bi_sm, 'start_year': bi_sy}) %}{% endif %}
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
-
         {% set max_end = 0 %}
         {% for r in all_rows %}
             {% set row_end = r.offset + r.duration %}
@@ -162,6 +137,20 @@
         {% set total_project_months = [max_end, 12]|max %}
 
         <div class="preview-timeline-chart">
+            <div class="preview-timeline-row preview-timeline-header">
+                <div class="preview-timeline-label"></div>
+                <div class="preview-timeline-bar-track">
+                    {% for m_offset in range(total_project_months) %}
+                    {% set abs_m = proj_start_month + m_offset - 1 %}
+                    {% set abs_y = proj_start_year + (abs_m // 12) %}
+                    {% set abs_m_1based = (abs_m % 12) + 1 %}
+                    {% set show_year = (m_offset == 0) or (abs_m_1based == 1) %}
+                    <div class="preview-timeline-month-label"{% if show_year %} style="font-weight:600;"{% endif %}>
+                        {% if show_year %}{{ month_names[abs_m_1based - 1] }} {{ abs_y }}{% else %}{{ month_names[abs_m_1based - 1] }}{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
             {% for r in all_rows %}
             {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
             {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}

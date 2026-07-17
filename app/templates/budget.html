@@ -84,6 +84,23 @@
         <span class="budget-total budget-total-final" id="budget-total-with-indirect">${{ total_with_indirect|currency }}</span>
     </div>
 
+    <div class="form-group" style="margin-top:16px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="show-budget-description"
+                   {% if proposal.show_budget_description %}checked{% endif %}
+                   onchange="toggleBudgetDescription()">
+            Include budget description
+        </label>
+        <div id="budget-description-wrapper" style="margin-top:8px;{% if not proposal.show_budget_description %}display:none;{% endif %}">
+            <textarea id="budget-description" rows="4"
+                      placeholder="Add notes or descriptions for the budget..."
+                      hx-trigger="keyup changed delay:1000ms, change"
+                      hx-put="/api/proposal/{{ proposal.id }}"
+                      hx-encoding="json"
+                      hx-vals='{"budget_description": "JS(document.getElementById(\'budget-description\').value)"}'>{{ proposal.budget_description }}</textarea>
+        </div>
+    </div>
+
     {% else %}
     <div class="callout callout-warning">
         <p><strong>No tasks available.</strong> Add tasks in the Scope section first.</p>
