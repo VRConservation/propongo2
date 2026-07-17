@@ -121,7 +121,9 @@ function saveCurrentTabData(proposalId) {
                     start_month: itemStartMonth,
                     start_year: itemStartYear,
                     duration_months: itemDuration,
-                    lead_entity: sub.querySelector('.lead-entity')?.value || ''
+                    lead_entity: sub.querySelector('.lead-entity')?.value || '',
+                    recurring: !!sub.querySelector('.item-recurring')?.checked,
+                    recurring_interval: parseInt(sub.querySelector('.item-recurring-interval')?.value) || 3
                 };
             });
 
@@ -153,7 +155,9 @@ function saveCurrentTabData(proposalId) {
                 lead_entity: card.querySelector('.lead-entity')?.value || '',
                 start_month: taskStartMonth,
                 start_year: taskStartYear,
-                duration_months: taskDuration
+                duration_months: taskDuration,
+                recurring: !!card.querySelector('.task-recurring')?.checked,
+                recurring_interval: parseInt(card.querySelector('.task-recurring-interval')?.value) || 3
             });
         });
 
@@ -591,7 +595,9 @@ window.addEventListener('beforeunload', function() {
                     start_month: itemStartMonth,
                     start_year: itemStartYear,
                     duration_months: itemDuration,
-                    lead_entity: sub.querySelector('.lead-entity')?.value || ''
+                    lead_entity: sub.querySelector('.lead-entity')?.value || '',
+                    recurring: !!sub.querySelector('.item-recurring')?.checked,
+                    recurring_interval: parseInt(sub.querySelector('.item-recurring-interval')?.value) || 3
                 };
             });
 
@@ -623,7 +629,9 @@ window.addEventListener('beforeunload', function() {
                 lead_entity: card.querySelector('.lead-entity')?.value || '',
                 start_month: taskStartMonth,
                 start_year: taskStartYear,
-                duration_months: taskDuration
+                duration_months: taskDuration,
+                recurring: !!card.querySelector('.task-recurring')?.checked,
+                recurring_interval: parseInt(card.querySelector('.task-recurring-interval')?.value) || 3
             });
         });
 

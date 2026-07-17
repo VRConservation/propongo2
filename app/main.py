@@ -282,6 +282,8 @@ def create_app() -> Flask:
                     item["duration_months"] = t.get("duration_months", 1)
                     if t.get("lead_entity"):
                         item["lead_entity"] = t["lead_entity"]
+                    item["recurring"] = t.get("recurring", False)
+                    item["recurring_interval"] = t.get("recurring_interval", 3)
             if items:
                 task_budgets[task["id"]] = {
                     "task": task,
