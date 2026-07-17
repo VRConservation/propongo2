@@ -1,5 +1,8 @@
-from app.main import run_server
+"""Run the Propongo2 development server."""
 
-print("\n ✨✨✨ 🔌 Server started on port 5000 ✨✨✨")
-print("  👉  http://localhost:5000  👈\n")
+from app.main import run_server
+from app.config import Config
+
+print("\n ✨✨✨ 🔌 Server started ✨✨✨")
+print(f"  👉  http://localhost:{Config.PORT}  👈\n")
 run_server()

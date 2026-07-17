@@ -54,3 +54,5 @@ htmlcov/
 # data/exports/*
 bump.md
 features.md
+CODE_AUDIT.MD
+FIXES_APPLIED.MD

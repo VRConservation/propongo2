@@ -1,7 +1,40 @@
+"""Data models for Propongo2.
+
+Tasks and budget items are stored as dictionaries with the following structure:
+
+Task dict:
+    {
+        'id': str,                # UUID
+        'name': str,              # Task name
+        'description': str,       # Task description
+        'lead_entity': str,       # Organization responsible
+        'start_month': int,       # Start month (1-12)
+        'start_year': int,        # Start year
+        'duration_months': int,   # Duration in months
+    }
+
+BudgetItem dict:
+    {
+        'id': str,                # UUID
+        'task_id': str,           # Associated task UUID
+        'name': str,              # Item name
+        'cost_per_unit': float,   # Unit cost
+        'units': float,           # Number of units
+    }
+
+Custom Section dict:
+    {
+        'id': str,                # UUID
+        'title': str,             # Section title
+        'content': str,           # Markdown content
+        'order': int,             # Display order
+    }
+"""
+
 import json
 import os
 from dataclasses import dataclass, field, asdict
-from typing import Any
+from typing import Optional
 from datetime import datetime
 import uuid
 
@@ -9,31 +42,9 @@ import uuid
 PROPOSALS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "proposals")
 
 
-def ensure_dirs():
+def ensure_dirs() -> None:
+    """Ensure data directories exist."""
     os.makedirs(PROPOSALS_DIR, exist_ok=True)
-
-
-@dataclass
-class Task:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    name: str = ""
-    description: str = ""
-    budget_items: list = field(default_factory=list)
-    lead_months: int = 0
-    duration_months: int = 1
-
-
-@dataclass
-class BudgetItem:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    task_id: str = ""
-    name: str = ""
-    cost_per_unit: float = 0.0
-    units: float = 1.0
-
-    @property
-    def total_cost(self) -> float:
-        return self.cost_per_unit * self.units
 
 
 @dataclass
@@ -75,7 +86,7 @@ class Proposal:
         os.replace(tmp, filepath)
 
     @classmethod
-    def load(cls, proposal_id: str) -> "Proposal | None":
+    def load(cls, proposal_id: str) -> Optional["Proposal"]:
         filepath = os.path.join(PROPOSALS_DIR, f"{proposal_id}.json")
         if not os.path.exists(filepath):
             return None

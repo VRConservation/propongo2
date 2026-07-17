@@ -1,100 +1,86 @@
+"""Main Flask application for Propongo2."""
+
 import json
 import os
-import re
-import uuid as _uuid
+import math
+import uuid
+import logging
 import threading
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from typing import Any, Optional, Tuple
+from weakref import WeakValueDictionary
+from flask import Flask, render_template, request, jsonify, redirect, url_for, Response
 from markupsafe import Markup
+import markdown
 from .models import Proposal, PROPOSALS_DIR
 from .export import export_bp
 from .snippets import snippets_bp
+from .utils import build_export_context
+from .config import Config, ERROR_MESSAGES
 from . import __version__
 
-_proposal_locks = {}
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, Config.LOG_LEVEL),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+_proposal_locks = WeakValueDictionary()
 _proposal_locks_lock = threading.Lock()
 
 
-def markdown_to_html(text):
+def markdown_to_html(text: str) -> str:
+    """Convert Markdown text to HTML using the markdown library.
+    
+    Args:
+        text: Markdown formatted text
+        
+    Returns:
+        HTML formatted string
+    """
     if not text:
         return ""
-    lines = text.split("\n")
-    html_lines = []
-    in_list = False
-    in_ol = False
-
-    for line in lines:
-        stripped = line.strip()
-
-        if not stripped:
-            if in_list:
-                html_lines.append("</ul>")
-                in_list = False
-            if in_ol:
-                html_lines.append("</ol>")
-                in_ol = False
-            continue
-
-        if stripped.startswith("######"):
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            html_lines.append(f"<h6>{_md_inline(stripped[6:])}</h6>")
-        elif stripped.startswith("#####"):
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            html_lines.append(f"<h5>{_md_inline(stripped[5:])}</h5>")
-        elif stripped.startswith("####"):
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            html_lines.append(f"<h4>{_md_inline(stripped[4:])}</h4>")
-        elif stripped.startswith("###"):
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            html_lines.append(f"<h3>{_md_inline(stripped[3:])}</h3>")
-        elif stripped.startswith("##"):
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            html_lines.append(f"<h2>{_md_inline(stripped[2:])}</h2>")
-        elif stripped.startswith("#"):
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            html_lines.append(f"<h1>{_md_inline(stripped[1:])}</h1>")
-        elif re.match(r"^[-*+]\s+", stripped):
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            if not in_list:
-                html_lines.append("<ul>")
-                in_list = True
-            content = re.sub(r"^[-*+]\s+", "", stripped)
-            html_lines.append(f"<li>{_md_inline(content)}</li>")
-        elif re.match(r"^\d+\.\s+", stripped):
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if not in_ol:
-                html_lines.append("<ol>")
-                in_ol = True
-            content = re.sub(r"^\d+\.\s+", "", stripped)
-            html_lines.append(f"<li>{_md_inline(content)}</li>")
-        else:
-            if in_list: html_lines.append("</ul>"); in_list = False
-            if in_ol: html_lines.append("</ol>"); in_ol = False
-            html_lines.append(f"<p>{_md_inline(stripped)}</p>")
-
-    if in_list:
-        html_lines.append("</ul>")
-    if in_ol:
-        html_lines.append("</ol>")
-
-    return "\n".join(html_lines)
+    return markdown.markdown(
+        text,
+        extensions=['tables', 'nl2br', 'fenced_code', 'sane_lists']
+    )
 
 
-def _md_inline(text):
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
-    text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
-    return text
+def validate_numeric(value: Any, name: str, min_val: float = 0.0) -> float:
+    """Validate and convert a numeric value.
+    
+    Args:
+        value: Value to validate
+        name: Name of the field (for error messages)
+        min_val: Minimum allowed value
+        
+    Returns:
+        Validated float value
+        
+    Raises:
+        ValueError: If value is invalid
+    """
+    try:
+        num = float(value)
+        if not math.isfinite(num):
+            raise ValueError(f"{name} must be a finite number")
+        if num < min_val:
+            raise ValueError(f"{name} must be >= {min_val}")
+        return num
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Invalid {name}: {str(e)}")
 
 
-def create_app():
+def create_app() -> Flask:
+    """Create and configure the Flask application.
+    
+    Returns:
+        Configured Flask application
+    """
     app = Flask(__name__)
-    app.secret_key = "propongo2-dev-key-change-in-production"
+    app.secret_key = Config.SECRET_KEY
+    
+    logger.info(f"Starting Propongo2 v{__version__}")
 
     app.register_blueprint(export_bp)
     app.register_blueprint(snippets_bp)
@@ -115,6 +101,7 @@ def create_app():
     def new_proposal():
         proposal = Proposal()
         proposal.save()
+        logger.info(f"Created new proposal: {proposal.id}")
         return redirect(url_for("editor", proposal_id=proposal.id))
 
     @app.route("/editor/<proposal_id>")
@@ -130,17 +117,18 @@ def create_app():
         )
 
     @app.route("/api/proposal/<proposal_id>", methods=["GET"])
-    def get_proposal(proposal_id):
+    def get_proposal(proposal_id: str) -> Tuple[Response, int]:
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
-        return jsonify(proposal.to_dict())
+            logger.warning(f"Proposal not found: {proposal_id}")
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
+        return jsonify(proposal.to_dict()), 200
 
     @app.route("/api/proposal/<proposal_id>", methods=["PUT"])
-    def save_proposal(proposal_id):
+    def save_proposal(proposal_id: str) -> Tuple[Response, int]:
         data = request.get_json()
         if not data:
-            return jsonify({"error": "No data"}), 400
+            return jsonify(ERROR_MESSAGES['NO_DATA']), 400
 
         with _proposal_locks_lock:
             if proposal_id not in _proposal_locks:
@@ -150,7 +138,8 @@ def create_app():
         with lock:
             proposal = Proposal.load(proposal_id)
             if not proposal:
-                return jsonify({"error": "Not found"}), 404
+                logger.warning(f"Proposal not found for update: {proposal_id}")
+                return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
             if "tasks" in data:
                 incoming_tasks = data.pop("tasks")
@@ -222,17 +211,17 @@ def create_app():
         return jsonify(Proposal.list_all())
 
     @app.route("/scope/<proposal_id>")
-    def scope_tab(proposal_id):
+    def scope_tab(proposal_id: str) -> Tuple[str, int] | Tuple[Response, int]:
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
         return render_template("scope.html", proposal=proposal, tasks=proposal.tasks)
 
     @app.route("/budget/<proposal_id>")
     def budget_tab(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         task_budgets = {}
         for task in proposal.tasks:
@@ -264,14 +253,14 @@ def create_app():
     def qualifications_tab(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
         return render_template("qualifications.html", proposal=proposal)
 
     @app.route("/timeline/<proposal_id>")
     def timeline_tab(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         task_budgets = {}
         timings = proposal.budget_item_timings or {}
@@ -315,11 +304,9 @@ def create_app():
     def custom_sections_tab(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
-        sections = sorted(
-            getattr(proposal, 'custom_sections', []),
-            key=lambda s: s.get("order", 0)
-        )
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
+        custom_sections = getattr(proposal, 'custom_sections', [])
+        sections = sorted(custom_sections, key=lambda s: s.get("order", 0))
         return render_template(
             "custom_sections.html",
             proposal=proposal,
@@ -330,14 +317,15 @@ def create_app():
     def add_section(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         data = request.get_json()
+        custom_sections = getattr(proposal, 'custom_sections', [])
         new_section = {
-            "id": str(_uuid.uuid4()),
+            "id": str(uuid.uuid4()),
             "title": data.get("title", "New Section"),
             "content": data.get("content", ""),
-            "order": len(getattr(proposal, 'custom_sections', []))
+            "order": len(custom_sections)
         }
         if not hasattr(proposal, 'custom_sections') or proposal.custom_sections is None:
             proposal.custom_sections = []
@@ -349,7 +337,7 @@ def create_app():
     def update_section(proposal_id, section_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         data = request.get_json()
         sections = getattr(proposal, 'custom_sections', [])
@@ -369,7 +357,7 @@ def create_app():
     def delete_section(proposal_id, section_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         sections = getattr(proposal, 'custom_sections', [])
         proposal.custom_sections = [
@@ -382,7 +370,7 @@ def create_app():
     def import_excel_section(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         if 'file' not in request.files:
             return jsonify({"error": "No file provided"}), 400
@@ -397,7 +385,11 @@ def create_app():
         try:
             import pandas as pd
             import io
+        except ImportError:
+            logger.error("Pandas/openpyxl not installed")
+            return jsonify(ERROR_MESSAGES['EXCEL_NOT_INSTALLED']), 500
 
+        try:
             # Read Excel file
             excel_data = file.read()
             excel_file = io.BytesIO(excel_data)
@@ -407,30 +399,34 @@ def create_app():
             markdown_content = df.to_markdown(index=False)
 
             # Create new section with Excel data
+            custom_sections = getattr(proposal, 'custom_sections', [])
             new_section = {
-                "id": str(_uuid.uuid4()),
+                "id": str(uuid.uuid4()),
                 "title": request.form.get('title', file.filename),
                 "content": markdown_content,
-                "order": len(getattr(proposal, 'custom_sections', []))
+                "order": len(custom_sections)
             }
 
             if not hasattr(proposal, 'custom_sections') or proposal.custom_sections is None:
                 proposal.custom_sections = []
             proposal.custom_sections.append(new_section)
             proposal.save()
-
+            
+            logger.info(f"Imported Excel file as section: {new_section['id']}")
             return jsonify(new_section), 201
 
-        except ImportError:
-            return jsonify({"error": "Excel support not installed. Install pandas and openpyxl."}), 500
+        except (ValueError, KeyError) as e:
+            logger.warning(f"Invalid Excel file: {e}")
+            return jsonify({**ERROR_MESSAGES['EXCEL_INVALID_FILE'], 'details': str(e)}), 400
         except Exception as e:
-            return jsonify({"error": f"Failed to import Excel: {str(e)}"}), 500
+            logger.error(f"Excel import failed: {e}")
+            return jsonify(ERROR_MESSAGES['EXCEL_PROCESSING_ERROR']), 500
 
     @app.route("/api/section/<proposal_id>/reorder", methods=["PUT"])
     def reorder_sections(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         data = request.get_json()
         section_order = data.get('section_order', [])
@@ -453,58 +449,20 @@ def create_app():
     def preview_tab(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
-        indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
-        indirect_amount = proposal.total_budget * (indirect_percent / 100)
-        total_with_indirect = proposal.total_budget + indirect_amount
-
-        tasks_with_timing = []
-        for t in proposal.tasks:
-            tasks_with_timing.append({
-                "id": t.get("id", ""),
-                "name": t.get("name", ""),
-                "description": t.get("description", ""),
-                "lead_entity": t.get("lead_entity", ""),
-                "start_month": t.get("start_month"),
-                "start_year": t.get("start_year"),
-                "duration_months": t.get("duration_months", 1),
-            })
-
-        budget_with_timing = []
-        timings = proposal.budget_item_timings or {}
-        for item in proposal.budget_items:
-            item_id = item.get("id", "")
-            timing = timings.get(item_id, {})
-            budget_with_timing.append({
-                **item,
-                "start_month": timing.get("start_month"),
-                "start_year": timing.get("start_year"),
-                "duration_months": timing.get("duration_months", 1),
-                "task_id": item.get("task_id", ""),
-            })
-
-        return render_template(
-            "preview.html",
-            proposal=proposal,
-            tasks=tasks_with_timing,
-            budget_items=proposal.budget_items,
-            budget_with_timing=budget_with_timing,
-            total_budget=proposal.total_budget,
-            indirect_percent=indirect_percent,
-            indirect_amount=indirect_amount,
-            total_with_indirect=total_with_indirect,
-        )
+        ctx = build_export_context(proposal)
+        return render_template("preview.html", **ctx)
 
     @app.route("/api/task/<proposal_id>", methods=["POST"])
     def add_task(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         data = request.get_json()
         task = {
-            "id": __import__("uuid").uuid4().hex[:8],
+            "id": uuid.uuid4().hex[:8],
             "name": data.get("name", ""),
             "description": data.get("description", ""),
             "lead_months": data.get("lead_months", 0),
@@ -518,7 +476,7 @@ def create_app():
     def delete_task(proposal_id, task_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         proposal.tasks = [t for t in proposal.tasks if t.get("id") != task_id]
         proposal.budget_items = [b for b in proposal.budget_items if b.get("task_id") != task_id]
@@ -529,59 +487,80 @@ def create_app():
     def add_budget_item(proposal_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         data = request.get_json()
-        item = {
-            "id": __import__("uuid").uuid4().hex[:8],
-            "task_id": data.get("task_id", ""),
-            "name": data.get("name", ""),
-            "cost_per_unit": float(data.get("cost_per_unit", 0)),
-            "units": float(data.get("units", 1)),
-        }
+        try:
+            item = {
+                "id": uuid.uuid4().hex[:8],
+                "task_id": data.get("task_id", ""),
+                "name": data.get("name", ""),
+                "cost_per_unit": validate_numeric(data.get("cost_per_unit", 0), "cost_per_unit", min_val=0.0),
+                "units": validate_numeric(data.get("units", 1), "units", min_val=0.0),
+            }
+        except ValueError as e:
+            logger.warning(f"Invalid budget item data: {e}")
+            return jsonify({**ERROR_MESSAGES['INVALID_NUMERIC'], 'details': str(e)}), 400
+        
         proposal.budget_items.append(item)
         proposal.save()
+        logger.debug(f"Added budget item {item['id']} to proposal {proposal_id}")
         return jsonify(item), 201
 
     @app.route("/api/budget/<proposal_id>/<item_id>", methods=["DELETE"])
     def delete_budget_item(proposal_id, item_id):
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         proposal.budget_items = [b for b in proposal.budget_items if b.get("id") != item_id]
         proposal.save()
         return jsonify({"ok": True})
 
     @app.route("/api/budget/<proposal_id>/<item_id>", methods=["PUT"])
-    def update_budget_item(proposal_id, item_id):
+    def update_budget_item(proposal_id: str, item_id: str) -> Tuple[Response, int]:
         proposal = Proposal.load(proposal_id)
         if not proposal:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
 
         data = request.get_json()
         if not data:
-            return jsonify({"error": "No data"}), 400
+            return jsonify(ERROR_MESSAGES['NO_DATA']), 400
 
         for item in proposal.budget_items:
             if item.get("id") == item_id:
-                item["task_id"] = data.get("task_id", item.get("task_id", ""))
-                item["name"] = data.get("name", item.get("name", ""))
-                item["cost_per_unit"] = float(data.get("cost_per_unit", item.get("cost_per_unit", 0)))
-                item["units"] = float(data.get("units", item.get("units", 1)))
+                try:
+                    item["task_id"] = data.get("task_id", item.get("task_id", ""))
+                    item["name"] = data.get("name", item.get("name", ""))
+                    item["cost_per_unit"] = validate_numeric(
+                        data.get("cost_per_unit", item.get("cost_per_unit", 0)),
+                        "cost_per_unit",
+                        min_val=0.0
+                    )
+                    item["units"] = validate_numeric(
+                        data.get("units", item.get("units", 1)),
+                        "units",
+                        min_val=0.0
+                    )
+                except ValueError as e:
+                    logger.warning(f"Invalid budget item data: {e}")
+                    return jsonify({**ERROR_MESSAGES['INVALID_NUMERIC'], 'details': str(e)}), 400
                 break
         else:
-            return jsonify({"error": "Item not found"}), 404
+            return jsonify(ERROR_MESSAGES['BUDGET_ITEM_NOT_FOUND']), 404
 
         proposal.save()
-        return jsonify({"ok": True})
+        logger.debug(f"Updated budget item {item_id} in proposal {proposal_id}")
+        return jsonify({"ok": True}), 200
 
     return app
 
 
-def run_server():
+def run_server() -> None:
+    """Run the development server."""
     app = create_app()
-    app.run(debug=True, port=5000)
+    logger.info(f"Starting server on {Config.HOST}:{Config.PORT}")
+    app.run(debug=Config.DEBUG, host=Config.HOST, port=Config.PORT)
 
 
 if __name__ == "__main__":
