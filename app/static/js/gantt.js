@@ -135,13 +135,6 @@ function autoSaveTimeline(proposalId) {
         const projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
         const startDate = projectStartYear + '-' + String(projectStartMonth).padStart(2, '0') + '-01';
 
-        document.querySelectorAll('.item-start-month').forEach(sel => {
-            sel.value = projectStartMonth;
-        });
-        document.querySelectorAll('.item-start-year').forEach(sel => {
-            sel.value = projectStartYear;
-        });
-
         const saveTasks = [];
         const budgetTimings = {};
         const taskBudgetItems = {};
@@ -411,7 +404,7 @@ function renderGantt(tasks) {
 
     let headerHTML = '<div class="gantt-header"><div class="gantt-label-col"></div><div class="gantt-month-cells">';
     months.forEach(m => {
-        headerHTML += `<div class="gantt-month${m.isFirstOfMonth ? ' gantt-month-year-start' : ''}" style="min-width:${monthWidth}px">${m.label}</div>`;
+        headerHTML += `<div class="gantt-month" style="min-width:${monthWidth}px">${m.label}</div>`;
     });
     headerHTML += '</div></div>';
 
@@ -426,84 +419,77 @@ function renderGantt(tasks) {
         }
     });
 
-    const expandedTasks = [];
+    const rowTasks = {};
     tasks.forEach(task => {
         const lead = monthsBetween(projectStartYear, projectStartMonth, task.start_year, task.start_month);
         const duration = task.duration_months || 1;
         const isBudget = task.is_budget;
         const recurring = task.recurring;
         const interval = task.recurring_interval || 3;
+        const key = `${task.id}_${isBudget ? 'b' : 't'}`;
 
-        if (recurring && !isBudget) {
+        if (!rowTasks[key]) {
+            rowTasks[key] = { ...task, _bars: [], _isBudget: isBudget };
+        }
+
+        if (recurring) {
             let offset = lead;
             while (offset < maxMonths) {
-                expandedTasks.push({
-                    ...task,
-                    _offset: offset,
-                    _duration: duration,
-                    _isRepeat: offset !== lead
-                });
-                offset += interval;
-            }
-        } else if (recurring && isBudget) {
-            let offset = lead;
-            while (offset < maxMonths) {
-                expandedTasks.push({
-                    ...task,
-                    _offset: offset,
-                    _duration: duration,
-                    _isRepeat: offset !== lead
-                });
+                rowTasks[key]._bars.push({ offset, duration });
                 offset += interval;
             }
         } else {
-            expandedTasks.push({
-                ...task,
-                _offset: lead,
-                _duration: duration,
-                _isRepeat: false
-            });
+            rowTasks[key]._bars.push({ offset: lead, duration });
         }
     });
 
-    expandedTasks.forEach(task => {
-        const taskLead = task._offset;
-        let duration = task._duration;
+    Object.values(rowTasks).forEach(task => {
+        const isBudget = task._isBudget;
+        const bars = task._bars;
         const entityLabel = task.lead_entity ? ` (${task.lead_entity})` : '';
-        const isBudget = task.is_budget;
 
-        if (!isBudget && !task._isRepeat && taskItems[task.id] && taskItems[task.id].length > 0) {
-            let minOffset = taskLead + duration;
-            let maxEnd = taskLead;
+        let totalLead = Infinity;
+        let totalEnd = 0;
+        bars.forEach(b => {
+            if (b.offset < totalLead) totalLead = b.offset;
+            if (b.offset + b.duration > totalEnd) totalEnd = b.offset + b.duration;
+        });
+
+        if (!isBudget && taskItems[task.id] && taskItems[task.id].length > 0) {
             taskItems[task.id].forEach(item => {
                 const itemLead = monthsBetween(projectStartYear, projectStartMonth, item.start_year, item.start_month);
                 const itemEnd = itemLead + (item.duration_months || 1);
-                if (itemLead < minOffset) minOffset = itemLead;
-                if (itemEnd > maxEnd) maxEnd = itemEnd;
+                if (itemLead < totalLead) totalLead = itemLead;
+                if (itemEnd > totalEnd) totalEnd = itemEnd;
             });
-            duration = maxEnd - minOffset;
-            if (duration < 1) duration = 1;
         }
 
         const rowClass = isBudget ? 'gantt-row gantt-row-budget' : 'gantt-row';
         const labelClass = isBudget ? 'gantt-row-label gantt-row-label-budget' : 'gantt-row-label';
         const barClass = isBudget ? 'gantt-bar gantt-bar-budget' : 'gantt-bar';
-        const label = task._isRepeat ? `${task.name} (repeat)` : `${task.name}${entityLabel}`;
 
         rowsHTML += `<div class="${rowClass}">
-            <div class="${labelClass}">${label}</div>
+            <div class="${labelClass}">${task.name}${entityLabel}</div>
             <div class="gantt-bar-container">`;
 
         for (let i = 0; i < maxMonths; i++) {
             const m = months[i];
-            const yearBorder = m.isFirstOfMonth && i > 0 ? ' gantt-year-border' : '';
-            if (i === taskLead) {
-                rowsHTML += `<div class="gantt-cell${yearBorder}" style="min-width:${monthWidth}px">
-                    <div class="${barClass}" style="width:${duration * monthWidth}px"></div>
+            let inBar = false;
+            for (const b of bars) {
+                if (i >= b.offset && i < b.offset + b.duration) {
+                    inBar = true;
+                    break;
+                }
+            }
+            if (inBar) {
+                const barStart = bars.find(b => i >= b.offset && i < b.offset + b.duration);
+                const barDur = barStart.duration;
+                rowsHTML += `<div class="gantt-cell" style="min-width:${monthWidth}px">
+                    <div class="${barClass}" style="width:${barDur * monthWidth}px"></div>
                 </div>`;
-                i += duration - 1;
-            } else if (i < taskLead || i >= taskLead + duration) {
-                rowsHTML += `<div class="gantt-cell${yearBorder}" style="min-width:${monthWidth}px"></div>`;
+                i += barDur - 1;
+            } else {
+                rowsHTML += `<div class="gantt-cell" style="min-width:${monthWidth}px"></div>`;
             }
         }
 

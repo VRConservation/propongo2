@@ -46,7 +46,7 @@ def export_pdf(proposal_id: str) -> Tuple[Response, int] | Response:
 
 
 @export_bp.route("/export/html/<proposal_id>")
-def export_html(proposal_id: str) -> Tuple[Response, int]:
+def export_html(proposal_id: str) -> Tuple[Response, int] | Response:
     """Export proposal as HTML file."""
     proposal = Proposal.load(proposal_id)
     if not proposal:
@@ -56,15 +56,9 @@ def export_html(proposal_id: str) -> Tuple[Response, int]:
     ctx = build_export_context(proposal)
     html_content = render_template("export_proposal.html", **ctx)
 
-    ensure_export_dir()
-    html_path = os.path.join(EXPORT_DIR, f"{proposal_id}.html")
-    with open(html_path, "w") as f:
-        f.write(html_content)
-
-    return send_file(
-        html_path,
+    return Response(
+        html_content,
         mimetype="text/html",
-        as_attachment=True,
-        download_name=f"{proposal.title or 'proposal'}.html",
+        headers={"Content-Disposition": "inline"},
     )
 

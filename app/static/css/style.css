@@ -743,40 +743,59 @@ textarea {
 .preview-timeline-row {
     display: flex;
     align-items: center;
-    margin-bottom: 6px;
-}
-
-.preview-timeline-label {
-    min-width: 140px;
-    font-size: 13px;
-    font-weight: 500;
-    padding-right: 12px;
-}
-
-.preview-timeline-bar-track {
-    flex: 1;
-    height: 20px;
-    background: var(--surface-alt);
-    border-radius: 4px;
-    position: relative;
+    margin-bottom: 2px;
     overflow: hidden;
 }
 
-.preview-timeline-bar {
-    height: 100%;
-    background: #1d4ed8;
-    border-radius: 4px;
-    min-width: 4px;
+.preview-timeline-label {
+    min-width: 120px;
+    max-width: 120px;
+    font-size: 11px;
+    font-weight: 500;
+    padding-right: 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
-.preview-timeline-dur {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
+.preview-timeline-cells {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+}
+.preview-timeline-cells.preview-timeline-data-cells {
+    display: block;
+    position: relative;
+    height: 16px;
+}
+
+.preview-timeline-year-cell {
+    text-align: center;
     font-size: 11px;
     font-weight: 600;
+    color: var(--text);
+    padding: 4px 0;
+    flex-shrink: 0;
+}
+
+.preview-timeline-month-cell {
+    flex: 1;
+    text-align: center;
+    font-size: 10px;
     color: var(--text-muted);
+    padding: 2px 0;
+}
+
+.preview-timeline-month-cell-year-start {
+}
+
+.preview-timeline-bar {
+    height: 16px;
+    background: #1d4ed8;
+    border-radius: 3px;
+}
+
+.preview-timeline-bar.preview-timeline-bar-indent {
+    background: #bfdbfe;
 }
 
 .preview-timeline-row-indent .preview-timeline-label {
@@ -784,25 +803,6 @@ textarea {
     font-weight: 400;
     font-size: 13px;
     color: var(--text-muted);
-}
-
-.preview-timeline-bar.preview-timeline-bar-indent {
-    background: #bfdbfe;
-}
-
-.preview-timeline-header .preview-timeline-bar-track {
-    display: flex;
-    height: auto;
-    background: none;
-}
-
-.preview-timeline-month-label {
-    flex: 1;
-    text-align: center;
-    font-size: 10px;
-    color: var(--text-muted);
-    padding: 2px 0;
-    border-left: 1px solid var(--border);
 }
 
 /* Proposals list page */
@@ -941,7 +941,6 @@ textarea {
     font-weight: 700;
     color: var(--text);
     padding: 4px 0;
-    border-bottom: 2px solid var(--border);
 }
 
 .gantt-month-cells {
@@ -957,7 +956,6 @@ textarea {
 }
 
 .gantt-month-year-start {
-    border-left: 2px solid #cbd5e1;
 }
 
 .gantt-row {
@@ -996,7 +994,6 @@ textarea {
 }
 
 .gantt-cell.gantt-year-border {
-    border-left: 2px solid #cbd5e1;
 }
 
 .gantt-bar {
@@ -1327,10 +1324,6 @@ textarea {
 
 [data-theme="dark"] .preview-budget-table tfoot .total-row td {
     border-color: var(--border);
-}
-
-[data-theme="dark"] .preview-timeline-bar-track {
-    background: var(--surface-alt);
 }
 
 [data-theme="dark"] .modal-content {

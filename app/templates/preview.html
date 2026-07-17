@@ -2,8 +2,8 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2>Proposal Preview</h2>
         <div class="preview-actions">
-            <button class="btn btn-secondary" onclick="window.print()">Print</button>
-            <button class="btn btn-secondary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
+            <button class="btn btn-primary" onclick="window.print()">Print</button>
+            <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'html')">Export HTML</button>
             <button class="btn btn-primary" onclick="exportProposal('{{ proposal.id }}', 'pdf')">Export PDF</button>
         </div>
     </div>
@@ -137,58 +137,43 @@
         {% set total_project_months = [max_end, 12]|max %}
 
         <div class="preview-timeline-chart">
-            <div class="preview-timeline-row preview-timeline-header">
+            {% set years_in_proj = ((proj_start_month - 1 + total_project_months - 1) // 12) + 1 %}
+            <div class="preview-timeline-row">
                 <div class="preview-timeline-label"></div>
-                <div class="preview-timeline-bar-track">
+                <div class="preview-timeline-cells">
+                    {% for y in range(years_in_proj) %}
+                    {% set abs_y = proj_start_year + y %}
+                    {% set year_start_m = [(abs_y - proj_start_year) * 12 - (proj_start_month - 1), 0]|max %}
+                    {% set year_end_m = [(y + 1) * 12 - (proj_start_month - 1), total_project_months]|min %}
+                    {% set year_span = year_end_m - year_start_m %}
+                    {% if year_span > 0 %}
+                    <div class="preview-timeline-year-cell" style="flex:{{ year_span }}">{{ abs_y }}</div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="preview-timeline-row">
+                <div class="preview-timeline-label"></div>
+                <div class="preview-timeline-cells">
                     {% for m_offset in range(total_project_months) %}
                     {% set abs_m = proj_start_month + m_offset - 1 %}
-                    {% set abs_y = proj_start_year + (abs_m // 12) %}
                     {% set abs_m_1based = (abs_m % 12) + 1 %}
-                    {% set show_year = (m_offset == 0) or (abs_m_1based == 1) %}
-                    <div class="preview-timeline-month-label"{% if show_year %} style="font-weight:600;"{% endif %}>
-                        {% if show_year %}{{ month_names[abs_m_1based - 1] }} {{ abs_y }}{% else %}{{ month_names[abs_m_1based - 1] }}{% endif %}
-                    </div>
+                    {% set is_year_start = (abs_m_1based == 1) %}
+                    <div class="preview-timeline-month-cell{% if is_year_start and m_offset > 0 %} preview-timeline-month-cell-year-start{% endif %}">{{ month_names[abs_m_1based - 1] }}</div>
                     {% endfor %}
                 </div>
             </div>
             {% for r in all_rows %}
             {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
             {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
-            {% set abs_sm = proj_start_month + r.offset - 1 %}
-            {% set abs_sy = proj_start_year + (abs_sm // 12) %}
-            {% set abs_sm_1based = (abs_sm % 12) + 1 %}
             <div class="preview-timeline-row{% if r.is_indent %} preview-timeline-row-indent{% endif %}">
                 <div class="preview-timeline-label">{{ r.name }}</div>
-                <div class="preview-timeline-bar-track">
-                    <div class="preview-timeline-bar{% if r.is_indent %} preview-timeline-bar-indent{% endif %}" style="margin-left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
-                    <span class="preview-timeline-dur">{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }} &middot; {{ r.duration }} mo</span>
+                <div class="preview-timeline-cells preview-timeline-data-cells">
+                    <div class="preview-timeline-bar{% if r.is_indent %} preview-timeline-bar-indent{% endif %}" style="position:absolute;left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        <table class="preview-timeline-table">
-            <thead>
-                <tr>
-                    <th>Task</th>
-                    <th>Lead</th>
-                    <th>Start</th>
-                    <th>Duration</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in all_rows %}
-                {% set abs_sm = proj_start_month + r.offset - 1 %}
-                {% set abs_sy = proj_start_year + (abs_sm // 12) %}
-                {% set abs_sm_1based = (abs_sm % 12) + 1 %}
-                <tr>
-                    <td{% if r.is_indent %} style="padding-left:24px"{% endif %}>{{ r.name }}</td>
-                    <td>{{ r.lead_entity }}</td>
-                    <td>{{ month_names[abs_sm_1based - 1] }} {{ abs_sy }}</td>
-                    <td>{{ r.duration }} months</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
     {% endif %}
 </div>

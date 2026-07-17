@@ -58,7 +58,7 @@
                             hx-delete="/api/task/{{ proposal.id }}/{{ task.id }}"
                             hx-target="closest .task-card"
                             hx-swap="outerHTML"
-                            hx-confirm="Remove this task and its budget items?">&times;</button>
+                            hx-disinherit="*">&times;</button>
                 </div>
                 <textarea class="task-desc-input" rows="2"
                           placeholder="Task description..."
