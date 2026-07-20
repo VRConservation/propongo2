@@ -134,6 +134,9 @@ function autoSaveTimeline(proposalId) {
         const projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
         const projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
         const startDate = projectStartYear + '-' + String(projectStartMonth).padStart(2, '0') + '-01';
+        const projectEndMonth = parseInt(document.getElementById('end-month')?.value) || projectStartMonth;
+        const projectEndYear = parseInt(document.getElementById('end-year')?.value) || projectStartYear + 1;
+        const endDate = projectEndYear + '-' + String(projectEndMonth).padStart(2, '0') + '-01';
 
         const saveTasks = [];
         const budgetTimings = {};
@@ -209,6 +212,7 @@ function autoSaveTimeline(proposalId) {
                 tasks: saveTasks,
                 budget_item_timings: budgetTimings,
                 start_date: startDate,
+                end_date: endDate,
                 timeline_use_days: !!document.getElementById('timeline-use-days')?.checked,
                 timeline_show_budget: !!document.getElementById('timeline-show-budget')?.checked
             })
@@ -225,6 +229,9 @@ function updateTimeline(proposalId) {
     const projectStartMonth = parseInt(document.getElementById('start-month').value) || 1;
     const projectStartYear = parseInt(document.getElementById('start-year').value) || 2025;
     const startDate = projectStartYear + '-' + String(projectStartMonth).padStart(2, '0') + '-01';
+    const projectEndMonth = parseInt(document.getElementById('end-month')?.value) || projectStartMonth;
+    const projectEndYear = parseInt(document.getElementById('end-year')?.value) || projectStartYear + 1;
+    const endDate = projectEndYear + '-' + String(projectEndMonth).padStart(2, '0') + '-01';
 
     const tasks = [];
     const taskBudgetItems = {};
@@ -340,6 +347,7 @@ function updateTimeline(proposalId) {
             tasks: saveTasks,
             budget_item_timings: budgetTimings,
             start_date: startDate,
+            end_date: endDate,
             timeline_use_days: useDays,
             timeline_show_budget: showBudget
         })
@@ -361,12 +369,19 @@ function renderGantt(tasks) {
     const projectStartMonth = parseInt(document.getElementById('start-month')?.value) || 1;
     const projectStartYear = parseInt(document.getElementById('start-year')?.value) || 2025;
 
-    let maxEnd = 0;
-    tasks.forEach(t => {
-        const offset = monthsBetween(projectStartYear, projectStartMonth, t.start_year, t.start_month);
-        const end = offset + (t.duration_months || 1);
-        if (end > maxEnd) maxEnd = end;
-    });
+    const endMonth = parseInt(document.getElementById('end-month')?.value);
+    const endYear = parseInt(document.getElementById('end-year')?.value);
+    let maxEnd;
+    if (endMonth && endYear) {
+        maxEnd = monthsBetween(projectStartYear, projectStartMonth, endYear, endMonth);
+    } else {
+        maxEnd = 0;
+        tasks.forEach(t => {
+            const offset = monthsBetween(projectStartYear, projectStartMonth, t.start_year, t.start_month);
+            const end = offset + (t.duration_months || 1);
+            if (end > maxEnd) maxEnd = end;
+        });
+    }
     const maxMonths = Math.max(12, Math.min(60, maxEnd));
     const monthWidth = 60;
 

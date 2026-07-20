@@ -54,43 +54,53 @@ def build_export_context(proposal) -> Dict[str, Any]:
         proj_start_month = 1
         proj_start_year = 2025
 
-    max_end = 0
-    for t in tasks_with_timing:
-        sm = t.get("start_month") or proj_start_month
-        sy = t.get("start_year") or proj_start_year
-        offset = (sy - proj_start_year) * 12 + (sm - proj_start_month)
-        dur = t.get("duration_months") or 1
-        if t.get("recurring"):
-            interval = t.get("recurring_interval") or 3
-            last = offset
-            while last < 120:
-                end = last + dur
-                if end > max_end:
-                    max_end = end
-                last += interval
-        else:
-            end = offset + dur
-            if end > max_end:
-                max_end = end
-    for bi in budget_with_timing:
-        sm = bi.get("start_month") or proj_start_month
-        sy = bi.get("start_year") or proj_start_year
-        offset = (sy - proj_start_year) * 12 + (sm - proj_start_month)
-        dur = bi.get("duration_months") or 1
-        if bi.get("recurring"):
-            interval = bi.get("recurring_interval") or 3
-            last = offset
-            while last < 120:
-                end = last + dur
-                if end > max_end:
-                    max_end = end
-                last += interval
-        else:
-            end = offset + dur
-            if end > max_end:
-                max_end = end
+    try:
+        ed = _dt.strptime(proposal.end_date, "%Y-%m-%d") if proposal.end_date else None
+        proj_end_month = ed.month if ed else proj_start_month
+        proj_end_year = ed.year if ed else proj_start_year + 1
+    except (ValueError, TypeError):
+        proj_end_month = proj_start_month
+        proj_end_year = proj_start_year + 1
 
-    timeline_total_months = max(max_end, 12)
+    if proposal.end_date:
+        timeline_total_months = max((proj_end_year - proj_start_year) * 12 + (proj_end_month - proj_start_month), 12)
+    else:
+        max_end = 0
+        for t in tasks_with_timing:
+            sm = t.get("start_month") or proj_start_month
+            sy = t.get("start_year") or proj_start_year
+            offset = (sy - proj_start_year) * 12 + (sm - proj_start_month)
+            dur = t.get("duration_months") or 1
+            if t.get("recurring"):
+                interval = t.get("recurring_interval") or 3
+                last = offset
+                while last < 120:
+                    end = last + dur
+                    if end > max_end:
+                        max_end = end
+                    last += interval
+            else:
+                end = offset + dur
+                if end > max_end:
+                    max_end = end
+        for bi in budget_with_timing:
+            sm = bi.get("start_month") or proj_start_month
+            sy = bi.get("start_year") or proj_start_year
+            offset = (sy - proj_start_year) * 12 + (sm - proj_start_month)
+            dur = bi.get("duration_months") or 1
+            if bi.get("recurring"):
+                interval = bi.get("recurring_interval") or 3
+                last = offset
+                while last < 120:
+                    end = last + dur
+                    if end > max_end:
+                        max_end = end
+                    last += interval
+            else:
+                end = offset + dur
+                if end > max_end:
+                    max_end = end
+        timeline_total_months = max(max_end, 12)
     if timeline_total_months <= 12:
         timeline_granularity = "months"
     elif timeline_total_months <= 36:
@@ -131,24 +141,21 @@ def build_export_context(proposal) -> Dict[str, Any]:
             recurring = False
 
         if recurring:
+            bars = []
             r_offset = offset
-            repeat = 0
             while r_offset < timeline_total_months:
-                label = t.get("name", "") if repeat == 0 else f"{t.get('name', '')} (repeat {repeat})"
-                all_rows.append({
-                    "name": label,
-                    "offset": r_offset,
-                    "duration": dur,
-                    "is_indent": False,
-                    "lead_entity": t.get("lead_entity", ""),
-                })
+                bars.append({"offset": r_offset, "duration": dur})
                 r_offset += interval
-                repeat += 1
+            all_rows.append({
+                "name": t.get("name", ""),
+                "bars": bars,
+                "is_indent": False,
+                "lead_entity": t.get("lead_entity", ""),
+            })
         else:
             all_rows.append({
                 "name": t.get("name", ""),
-                "offset": offset,
-                "duration": dur,
+                "bars": [{"offset": offset, "duration": dur}],
                 "is_indent": False,
                 "lead_entity": t.get("lead_entity", ""),
             })
@@ -162,23 +169,21 @@ def build_export_context(proposal) -> Dict[str, Any]:
                 bi_recurring = bi.get("recurring", False)
                 bi_interval = bi.get("recurring_interval") or 3
                 if bi_recurring:
+                    bars = []
                     br_offset = bi_offset
-                    repeat = 0
                     while br_offset < timeline_total_months:
-                        all_rows.append({
-                            "name": bi.get("name", "") if repeat == 0 else f"{bi.get('name', '')} (repeat {repeat})",
-                            "offset": br_offset,
-                            "duration": bi_dur,
-                            "is_indent": True,
-                            "lead_entity": "",
-                        })
+                        bars.append({"offset": br_offset, "duration": bi_dur})
                         br_offset += bi_interval
-                        repeat += 1
+                    all_rows.append({
+                        "name": bi.get("name", ""),
+                        "bars": bars,
+                        "is_indent": True,
+                        "lead_entity": "",
+                    })
                 else:
                     all_rows.append({
                         "name": bi.get("name", ""),
-                        "offset": bi_offset,
-                        "duration": bi_dur,
+                        "bars": [{"offset": bi_offset, "duration": bi_dur}],
                         "is_indent": True,
                         "lead_entity": "",
                     })

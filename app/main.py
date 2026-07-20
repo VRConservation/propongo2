@@ -299,6 +299,14 @@ def create_app() -> Flask:
             start_date_month = now.month
             start_date_year = now.year
 
+        try:
+            ed = datetime.strptime(proposal.end_date, "%Y-%m-%d") if proposal.end_date else None
+            end_date_month = ed.month if ed else start_date_month
+            end_date_year = ed.year if ed else start_date_year + 1
+        except (ValueError, TypeError):
+            end_date_month = start_date_month
+            end_date_year = start_date_year + 1
+
         return render_template(
             "timeline.html",
             proposal=proposal,
@@ -306,6 +314,9 @@ def create_app() -> Flask:
             start_date=proposal.start_date,
             start_date_month=start_date_month,
             start_date_year=start_date_year,
+            end_date=proposal.end_date,
+            end_date_month=end_date_month,
+            end_date_year=end_date_year,
             task_budgets=task_budgets,
         )
 

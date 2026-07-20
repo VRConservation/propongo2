@@ -94,6 +94,9 @@ function saveCurrentTabData(proposalId) {
         const startMonth = parseInt(document.getElementById('start-month')?.value) || 1;
         const startYear = parseInt(document.getElementById('start-year')?.value) || 2025;
         data.start_date = startYear + '-' + String(startMonth).padStart(2, '0') + '-01';
+        const endMonth = parseInt(document.getElementById('end-month')?.value) || startMonth;
+        const endYear = parseInt(document.getElementById('end-year')?.value) || startYear + 1;
+        data.end_date = endYear + '-' + String(endMonth).padStart(2, '0') + '-01';
         data.timeline_use_days = !!useDays;
         data.timeline_show_budget = !!document.getElementById('timeline-show-budget')?.checked;
 
@@ -569,6 +572,9 @@ window.addEventListener('beforeunload', function() {
         const startMonth = parseInt(document.getElementById('start-month')?.value) || 1;
         const startYear = parseInt(document.getElementById('start-year')?.value) || 2025;
         data.start_date = startYear + '-' + String(startMonth).padStart(2, '0') + '-01';
+        const endMonth = parseInt(document.getElementById('end-month')?.value) || startMonth;
+        const endYear = parseInt(document.getElementById('end-year')?.value) || startYear + 1;
+        data.end_date = endYear + '-' + String(endMonth).padStart(2, '0') + '-01';
         data.timeline_use_days = !!useDays;
         data.timeline_show_budget = !!document.getElementById('timeline-show-budget')?.checked;
         const saveTasks = [];

@@ -288,12 +288,20 @@
         {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
         {% set quarter_names = ['Q1','Q2','Q3','Q4'] %}
 
-        {% set max_end = 0 %}
-        {% for r in all_rows %}
-            {% set row_end = r.offset + r.duration %}
-            {% if row_end > max_end %}{% set max_end = row_end %}{% endif %}
-        {% endfor %}
-        {% set total_project_months = [max_end, 12]|max %}
+        {% if proposal.end_date and proposal.end_date|length >= 7 %}
+            {% set proj_end_month = proposal.end_date[5:7]|int %}
+            {% set proj_end_year = proposal.end_date[:4]|int %}
+            {% set total_project_months = [(proj_end_year - proj_start_year) * 12 + (proj_end_month - proj_start_month), 12]|max %}
+        {% else %}
+            {% set max_end = 0 %}
+            {% for r in all_rows %}
+                {% for bar in r.bars %}
+                {% set row_end = bar.offset + bar.duration %}
+                {% if row_end > max_end %}{% set max_end = row_end %}{% endif %}
+                {% endfor %}
+            {% endfor %}
+            {% set total_project_months = [max_end, 12]|max %}
+        {% endif %}
 
         <div class="timeline-chart">
             {% set years_in_proj = ((proj_start_month - 1 + total_project_months - 1) // 12) + 1 %}
@@ -323,12 +331,14 @@
                 </div>
             </div>
             {% for r in all_rows %}
-            {% set left_pct = (r.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
-            {% set width_pct = (r.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
             <div class="timeline-chart-row">
                 <div class="timeline-chart-label"{% if r.is_indent %} style="padding-left:16px"{% endif %}>{{ r.name }}</div>
                 <div class="timeline-chart-cells timeline-chart-data-cells">
+                    {% for bar in r.bars %}
+                    {% set left_pct = (bar.offset / total_project_months * 100)|round(1) if total_project_months > 0 else 0 %}
+                    {% set width_pct = (bar.duration / total_project_months * 100)|round(1) if total_project_months > 0 else 100 %}
                     <div class="timeline-chart-bar{% if r.is_indent %} timeline-chart-bar-indent{% endif %}" style="position:absolute;left:{{ left_pct }}%;width:{{ width_pct }}%"></div>
+                    {% endfor %}
                 </div>
             </div>
             {% endfor %}
