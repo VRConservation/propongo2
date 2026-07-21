@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Tracker: {{ proposal.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+        .tracker-container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+        .tracker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .tracker-header h1 { font-size: 24px; }
+        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+        .dash-card .dash-value { font-size: 28px; font-weight: 700; color: var(--primary); }
+        .dash-card .dash-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .section-title { font-size: 18px; font-weight: 600; margin: 24px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .task-tracker-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .task-tracker-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .task-tracker-name { font-weight: 600; flex: 1; }
+        .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .status-not_started { background: #e2e8f0; color: #475569; }
+        .status-in_progress { background: #dbeafe; color: #1d4ed8; }
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-delayed { background: #fef3c7; color: #92400e; }
+        .progress-bar-bg { height: 8px; background: var(--border); border-radius: 4px; margin: 8px 0; }
+        .progress-bar-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s; }
+        .task-tracker-meta { display: flex; gap: 16px; font-size: 13px; color: var(--text-muted); margin-top: 8px; flex-wrap: wrap; }
+        .tracker-input { padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; background: var(--surface); color: var(--text); }
+        .tracker-input:focus { border-color: var(--primary); outline: none; }
+        .tracker-select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; background: var(--surface); color: var(--text); }
+        .notes-textarea { width: 100%; min-height: 60px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-family: inherit; resize: vertical; background: var(--surface); color: var(--text); margin-top: 8px; }
+        .notes-textarea:focus { border-color: var(--primary); outline: none; }
+        .budget-tracker-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        .budget-tracker-table th, .budget-tracker-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .budget-tracker-table th { background: var(--surface-alt); font-weight: 600; }
+        .budget-tracker-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .budget-tracker-table td input { width: 80px; text-align: right; padding: 4px 8px; font-size: 13px; }
+        .budget-tracker-table .subtotal-row { font-weight: 600; background: var(--surface-alt); }
+        .variance-positive { color: var(--success); }
+        .variance-negative { color: var(--danger); }
+        .milestone-list { list-style: none; padding: 0; }
+        .milestone-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .milestone-item:last-child { border-bottom: none; }
+        .milestone-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .milestone-item .milestone-text { flex: 1; }
+        .milestone-item .milestone-date { font-size: 13px; color: var(--text-muted); min-width: 100px; }
+        .milestone-item .milestone-delete { opacity: 0; transition: opacity 0.15s; }
+        .milestone-item:hover .milestone-delete { opacity: 1; }
+        .report-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .report-date { font-size: 12px; color: var(--text-muted); }
+        .report-content { font-size: 14px; line-height: 1.6; }
+        .add-form-row { display: flex; gap: 8px; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="tracker-container">
+        <div class="tracker-header">
+            <div>
+                <h1>{{ proposal.title }}</h1>
+                <p style="color:var(--text-muted);font-size:13px;">{{ proposal.client_name }}{% if proposal.subtitle %} &middot; {{ proposal.subtitle }}{% endif %}</p>
+            </div>
+            <a href="/editor/{{ proposal.id }}" class="btn btn-secondary">Back to Editor</a>
+        </div>
+
+        <div class="dashboard-cards">
+            <div class="dash-card">
+                <div class="dash-value">{{ overall_pct }}%</div>
+                <div class="dash-label">Tasks Completed</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-value">{{ tasks|length }}</div>
+                <div class="dash-label">Total Tasks</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-value">${{ total_with_indirect|currency }}</div>
+                <div class="dash-label">Total Budget</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-value">{{ milestones|length }}</div>
+                <div class="dash-label">Milestones</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Tasks</h2>
+        {% for task in tasks %}
+        <div class="task-tracker-card" data-task-id="{{ task.id }}">
+            <div class="task-tracker-header">
+                <span class="task-tracker-name">{{ task.name }}</span>
+                <select class="tracker-select" onchange="updateTaskStatus('{{ proposal.id }}', '{{ task.id }}', 'status', this.value)">
+                    <option value="not_started" {% if task.get('status') == 'not_started' %}selected{% endif %}>Not Started</option>
+                    <option value="in_progress" {% if task.get('status') == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if task.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="delayed" {% if task.get('status') == 'delayed' %}selected{% endif %}>Delayed</option>
+                </select>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width:{{ task.get('progress_pct', 0) }}%"></div>
+            </div>
+            <div class="task-tracker-meta">
+                <span>Progress:
+                    <input type="number" class="tracker-input" style="width:50px;" min="0" max="100"
+                           value="{{ task.get('progress_pct', 0) }}"
+                           onchange="updateTaskStatus('{{ proposal.id }}', '{{ task.id }}', 'progress_pct', this.value)">%
+                </span>
+                <span>Start:
+                    <input type="date" class="tracker-input"
+                           value="{{ task.get('actual_start', '') }}"
+                           onchange="updateTaskStatus('{{ proposal.id }}', '{{ task.id }}', 'actual_start', this.value)">
+                </span>
+                <span>End:
+                    <input type="date" class="tracker-input"
+                           value="{{ task.get('actual_end', '') }}"
+                           onchange="updateTaskStatus('{{ proposal.id }}', '{{ task.id }}', 'actual_end', this.value)">
+                </span>
+            </div>
+            <textarea class="notes-textarea" placeholder="Progress notes..."
+                      onchange="updateTaskStatus('{{ proposal.id }}', '{{ task.id }}', 'notes', this.value)">{{ task.get('notes', '') }}</textarea>
+        </div>
+        {% endfor %}
+
+        <h2 class="section-title">Budget Tracking</h2>
+        <table class="budget-tracker-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Item</th>
+                    <th style="text-align:right;">Planned</th>
+                    <th style="text-align:right;">Actual</th>
+                    <th style="text-align:right;">Variance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                    {% if task.id in task_budgets %}
+                    <tr class="subtotal-row">
+                        <td colspan="2">{{ task.name }}</td>
+                        <td class="num">${{ task_budgets[task.id].subtotal|currency }}</td>
+                        <td class="num">${{ task_budgets[task.id].actual_total|currency }}</td>
+                        <td class="num {% if task_budgets[task.id].actual_total > task_budgets[task.id].subtotal %}variance-negative{% else %}variance-positive{% endif %}">
+                            ${{ (task_budgets[task.id].actual_total - task_budgets[task.id].subtotal)|currency }}
+                        </td>
+                    </tr>
+                    {% for item in task_budgets[task.id]["items"] %}
+                    <tr>
+                        <td></td>
+                        <td>{{ item.name }}</td>
+                        <td class="num">${{ (item.cost_per_unit * item.units)|currency }}</td>
+                        <td class="num">
+                            <input type="number" class="tracker-input" min="0" step="1"
+                                   value="{{ item.get('actual_cost', 0)|int }}"
+                                   onchange="updateBudgetActual('{{ proposal.id }}', '{{ item.id }}', this.value)">
+                        </td>
+                        <td class="num {% if item.get('actual_cost', 0) > (item.cost_per_unit * item.units) %}variance-negative{% else %}variance-positive{% endif %}">
+                            ${{ (item.get('actual_cost', 0) - item.cost_per_unit * item.units)|currency }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                {% endfor %}
+                <tr class="subtotal-row" style="border-top:2px solid var(--border);">
+                    <td colspan="2"><strong>Total</strong></td>
+                    <td class="num"><strong>${{ total_with_indirect|currency }}</strong></td>
+                    <td class="num"><strong>
+                        ${{ (task_budgets.values()|map(attribute='actual_total')|sum + indirect_amount)|currency }}
+                    </strong></td>
+                    <td class="num"><strong></strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 class="section-title">Milestones</h2>
+        <ul class="milestone-list" id="milestone-list">
+            {% for m in milestones %}
+            <li class="milestone-item" data-milestone-id="{{ m.id }}">
+                <input type="checkbox" {% if m.completed %}checked{% endif %}
+                       onchange="toggleMilestone('{{ proposal.id }}', '{{ m.id }}', this.checked)">
+                <span class="milestone-text">{{ m.name }}</span>
+                <span class="milestone-date">
+                    <input type="date" class="tracker-input" value="{{ m.date }}"
+                           onchange="updateMilestone('{{ proposal.id }}', '{{ m.id }}', 'date', this.value)">
+                </span>
+                <button class="btn-icon btn-danger-icon milestone-delete"
+                        onclick="deleteMilestone('{{ proposal.id }}', '{{ m.id }}')">&times;</button>
+            </li>
+            {% endfor %}
+        </ul>
+        <div class="add-form-row">
+            <input type="text" id="new-milestone-name" placeholder="Milestone name" class="tracker-input" style="flex:1;">
+            <input type="date" id="new-milestone-date" class="tracker-input">
+            <button class="btn btn-primary btn-sm" onclick="addMilestone('{{ proposal.id }}')">Add</button>
+        </div>
+
+        <h2 class="section-title">Reports</h2>
+        <div id="report-list">
+            {% for r in reports|reverse %}
+            <div class="report-card" data-report-id="{{ r.id }}">
+                <div class="report-header">
+                    <strong>{{ r.title }}</strong>
+                    <span class="report-date">
+                        <input type="date" class="tracker-input" value="{{ r.date }}"
+                               onchange="updateReport('{{ proposal.id }}', '{{ r.id }}', 'date', this.value)">
+                        <button class="btn-icon btn-danger-icon milestone-delete"
+                                onclick="deleteReport('{{ proposal.id }}', '{{ r.id }}')">&times;</button>
+                    </span>
+                </div>
+                <textarea class="notes-textarea" placeholder="Report content..."
+                          onchange="updateReport('{{ proposal.id }}', '{{ r.id }}', 'content', this.value)">{{ r.content }}</textarea>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="add-form-row" style="margin-top:12px;">
+            <input type="text" id="new-report-title" placeholder="Report title" class="tracker-input" style="flex:1;">
+            <button class="btn btn-primary btn-sm" onclick="addReport('{{ proposal.id }}')">Add Report</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/tracker.js') }}"></script>
+</body>
+</html>

@@ -304,3 +304,49 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function openBudgetImportModal() {
+    document.getElementById('budget-import-modal').classList.remove('hidden');
+    document.getElementById('budget-import-file').value = '';
+}
+
+function closeBudgetImportModal() {
+    document.getElementById('budget-import-modal').classList.add('hidden');
+}
+
+async function uploadBudgetExcel() {
+    const fileInput = document.getElementById('budget-import-file');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('Please select an Excel file.');
+        return;
+    }
+
+    const match = window.location.pathname.match(/\/editor\/([^/]+)/);
+    if (!match) return;
+    const proposalId = match[1];
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/api/proposal/' + proposalId + '/import-budget', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            closeBudgetImportModal();
+            const msg = 'Imported ' + result.created_items + ' budget items';
+            const taskMsg = result.created_tasks > 0 ? ' and ' + result.created_tasks + ' new tasks' : '';
+            alert(msg + taskMsg + '. Reloading...');
+            window.location.reload();
+        } else {
+            alert(result.error || 'Failed to import budget.');
+        }
+    } catch (error) {
+        alert('Error importing file: ' + error.message);
+    }
+}

@@ -210,6 +210,9 @@ def create_app() -> Flask:
         new_proposal.custom_sections = list(proposal.custom_sections) if proposal.custom_sections else []
         new_proposal.timeline_use_days = proposal.timeline_use_days
         new_proposal.timeline_show_budget = proposal.timeline_show_budget
+        new_proposal.end_date = getattr(proposal, 'end_date', '') or ''
+        new_proposal.milestones = list(proposal.milestones) if proposal.milestones else []
+        new_proposal.reports = list(proposal.reports) if proposal.reports else []
         new_proposal.save()
 
         return jsonify({"id": new_id}), 201
@@ -217,6 +220,91 @@ def create_app() -> Flask:
     @app.route("/api/proposals", methods=["GET"])
     def list_proposals():
         return jsonify(Proposal.list_all())
+
+    @app.route("/templates")
+    def templates_page():
+        templates = Proposal.list_templates()
+        return render_template("templates.html", templates=templates)
+
+    @app.route("/api/templates", methods=["GET"])
+    def list_templates():
+        return jsonify(Proposal.list_templates())
+
+    @app.route("/api/template/<template_id>", methods=["DELETE"])
+    def delete_template(template_id):
+        Proposal.delete(template_id, is_template=True)
+        return jsonify({"ok": True})
+
+    @app.route("/api/proposal/<proposal_id>/save-as-template", methods=["POST"])
+    def save_as_template(proposal_id):
+        data = request.get_json()
+        template_name = data.get("template_name", "").strip()
+        template_category = data.get("template_category", "").strip()
+        if not template_name:
+            return jsonify({"error": "Template name required"}), 400
+
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        new_id = re.sub(r"[^a-z0-9_-]", "_", template_name.lower())
+        new_id = re.sub(r"_+", "_", new_id).strip("_")
+        if not new_id:
+            new_id = uuid.uuid4().hex[:8]
+
+        original_id = new_id
+        counter = 1
+        while Proposal.load(new_id, is_template=True):
+            new_id = f"{original_id}_{counter}"
+            counter += 1
+
+        tmpl = Proposal(id=new_id, title=proposal.title)
+        tmpl.client_name = proposal.client_name
+        tmpl.subtitle = getattr(proposal, 'subtitle', '') or ''
+        tmpl.project_summary = proposal.project_summary
+        tmpl.scope = getattr(proposal, 'scope', '') or ''
+        tmpl.tasks = list(proposal.tasks)
+        tmpl.qualifications = proposal.qualifications
+        tmpl.budget_items = list(proposal.budget_items)
+        tmpl.budget_item_timings = dict(proposal.budget_item_timings) if proposal.budget_item_timings else {}
+        tmpl.indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+        tmpl.show_budget_description = getattr(proposal, 'show_budget_description', False)
+        tmpl.budget_description = getattr(proposal, 'budget_description', '') or ''
+        tmpl.custom_sections = list(proposal.custom_sections) if proposal.custom_sections else []
+        tmpl.timeline_use_days = proposal.timeline_use_days
+        tmpl.timeline_show_budget = proposal.timeline_show_budget
+        tmpl.is_template = True
+        tmpl.template_name = template_name
+        tmpl.template_category = template_category
+        tmpl.save()
+
+        return jsonify({"id": new_id}), 201
+
+    @app.route("/templates/new-from/<template_id>")
+    def new_from_template(template_id):
+        tmpl = Proposal.load(template_id, is_template=True)
+        if not tmpl:
+            return redirect(url_for("templates_page"))
+
+        new_id = uuid.uuid4().hex[:8]
+        proposal = Proposal(id=new_id, title=tmpl.title)
+        proposal.client_name = tmpl.client_name
+        proposal.subtitle = getattr(tmpl, 'subtitle', '') or ''
+        proposal.project_summary = tmpl.project_summary
+        proposal.scope = getattr(tmpl, 'scope', '') or ''
+        proposal.tasks = list(tmpl.tasks)
+        proposal.qualifications = tmpl.qualifications
+        proposal.budget_items = list(tmpl.budget_items)
+        proposal.budget_item_timings = dict(tmpl.budget_item_timings) if tmpl.budget_item_timings else {}
+        proposal.indirect_percent = getattr(tmpl, 'indirect_percent', 0) or 0
+        proposal.show_budget_description = getattr(tmpl, 'show_budget_description', False)
+        proposal.budget_description = getattr(tmpl, 'budget_description', '') or ''
+        proposal.custom_sections = list(tmpl.custom_sections) if tmpl.custom_sections else []
+        proposal.timeline_use_days = tmpl.timeline_use_days
+        proposal.timeline_show_budget = tmpl.timeline_show_budget
+        proposal.save()
+
+        return redirect(url_for("editor", proposal_id=proposal.id))
 
     @app.route("/scope/<proposal_id>")
     def scope_tab(proposal_id: str) -> Tuple[str, int] | Tuple[Response, int]:
@@ -577,6 +665,323 @@ def create_app() -> Flask:
         proposal.save()
         logger.debug(f"Updated budget item {item_id} in proposal {proposal_id}")
         return jsonify({"ok": True}), 200
+
+    @app.route("/api/proposal/<proposal_id>/import-budget", methods=["POST"])
+    def import_budget(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify(ERROR_MESSAGES['PROPOSAL_NOT_FOUND']), 404
+
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({"error": "Only Excel files (.xlsx, .xls) are supported"}), 400
+
+        try:
+            from openpyxl import load_workbook
+            import io
+        except ImportError:
+            return jsonify({"error": "openpyxl not installed"}), 500
+
+        try:
+            excel_data = file.read()
+            wb = load_workbook(io.BytesIO(excel_data), read_only=True)
+            ws = wb.active
+
+            rows = list(ws.iter_rows(values_only=True))
+            if len(rows) < 2:
+                return jsonify({"error": "File has no data rows"}), 400
+
+            header = [str(c).strip().lower() if c else "" for c in rows[0]]
+            if not all(h in header for h in ["task", "item", "cost/unit", "units"]):
+                return jsonify({"error": "Required columns: Task, Item, Cost/Unit, Units"}), 400
+
+            task_idx = header.index("task")
+            item_idx = header.index("item")
+            cost_idx = header.index("cost/unit")
+            units_idx = header.index("units")
+
+            existing_tasks = {t["name"].strip().lower(): t for t in proposal.tasks}
+            created_tasks = 0
+            created_items = 0
+
+            for row in rows[1:]:
+                task_name = str(row[task_idx]).strip() if row[task_idx] else ""
+                item_name = str(row[item_idx]).strip() if row[item_idx] else ""
+
+                if not task_name or not item_name:
+                    continue
+
+                task_key = task_name.lower()
+                if task_key not in existing_tasks:
+                    new_task = {
+                        "id": uuid.uuid4().hex[:8],
+                        "name": task_name,
+                        "description": "",
+                        "start_month": 1,
+                        "start_year": datetime.now().year,
+                        "duration_months": 12,
+                    }
+                    proposal.tasks.append(new_task)
+                    existing_tasks[task_key] = new_task
+                    created_tasks += 1
+
+                try:
+                    cost = float(row[cost_idx]) if row[cost_idx] else 0
+                    units = float(row[units_idx]) if row[units_idx] else 1
+                except (ValueError, TypeError):
+                    cost = 0
+                    units = 1
+
+                budget_item = {
+                    "id": uuid.uuid4().hex[:8],
+                    "task_id": existing_tasks[task_key]["id"],
+                    "name": item_name,
+                    "cost_per_unit": cost,
+                    "units": units,
+                }
+                proposal.budget_items.append(budget_item)
+                created_items += 1
+
+            wb.close()
+            proposal.save()
+
+            return jsonify({
+                "ok": True,
+                "created_tasks": created_tasks,
+                "created_items": created_items,
+            }), 200
+
+        except Exception as e:
+            logger.error(f"Budget import failed: {e}")
+            return jsonify({"error": f"Failed to process file: {str(e)}"}), 500
+
+    @app.route("/api/budget-template", methods=["GET"])
+    def download_budget_template():
+        from openpyxl import Workbook
+        import io
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Budget Template"
+        ws.append(["Task", "Item", "Cost/Unit", "Units"])
+        ws.append(["Scoping", "Initial meeting", 200, 6])
+        ws.append(["Scoping", "Data collection", 200, 20])
+        ws.append(["Analysis", "Forest valuation", 300, 40])
+        ws.append(["Results", "Report writing", 250, 30])
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        return Response(
+            buf.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=budget_template.xlsx"}
+        )
+
+    @app.route("/tracker/<proposal_id>")
+    def tracker(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return redirect(url_for("index"))
+
+        indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+        indirect_amount = proposal.total_budget * (indirect_percent / 100)
+        total_with_indirect = proposal.total_budget + indirect_amount
+
+        task_budgets = {}
+        timings = proposal.budget_item_timings or {}
+        for task in proposal.tasks:
+            items = [b for b in proposal.budget_items if b.get("task_id") == task["id"]]
+            for item in items:
+                t = timings.get(item.get("id", ""), {})
+                if t:
+                    item["actual_cost"] = t.get("actual_cost", 0)
+            subtotal = sum(i.get("cost_per_unit", 0) * i.get("units", 0) for i in items)
+            actual_total = sum(i.get("actual_cost", 0) for i in items)
+            task_budgets[task["id"]] = {
+                "task": task,
+                "items": items,
+                "subtotal": subtotal,
+                "actual_total": actual_total,
+            }
+
+        milestones = getattr(proposal, 'milestones', []) or []
+        reports = getattr(proposal, 'reports', []) or []
+
+        completed_tasks = sum(1 for t in proposal.tasks if t.get("status") == "completed")
+        total_tasks = len(proposal.tasks)
+        overall_pct = round(completed_tasks / total_tasks * 100) if total_tasks else 0
+
+        return render_template(
+            "tracker.html",
+            proposal=proposal,
+            tasks=proposal.tasks,
+            task_budgets=task_budgets,
+            total_budget=proposal.total_budget,
+            indirect_percent=indirect_percent,
+            indirect_amount=indirect_amount,
+            total_with_indirect=total_with_indirect,
+            milestones=milestones,
+            reports=reports,
+            overall_pct=overall_pct,
+        )
+
+    @app.route("/api/tracker/<proposal_id>/task/<task_id>", methods=["PUT"])
+    def update_tracker_task(proposal_id, task_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        for task in proposal.tasks:
+            if task.get("id") == task_id:
+                if "status" in data:
+                    task["status"] = data["status"]
+                if "progress_pct" in data:
+                    task["progress_pct"] = int(data["progress_pct"])
+                if "actual_start" in data:
+                    task["actual_start"] = data["actual_start"]
+                if "actual_end" in data:
+                    task["actual_end"] = data["actual_end"]
+                if "notes" in data:
+                    task["notes"] = data["notes"]
+                break
+        else:
+            return jsonify({"error": "Task not found"}), 404
+
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/tracker/<proposal_id>/budget/<item_id>", methods=["PUT"])
+    def update_tracker_budget(proposal_id, item_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        timings = proposal.budget_item_timings or {}
+        if item_id not in timings:
+            timings[item_id] = {}
+        if "actual_cost" in data:
+            timings[item_id]["actual_cost"] = float(data["actual_cost"])
+        proposal.budget_item_timings = timings
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/tracker/<proposal_id>/milestone", methods=["POST"])
+    def add_milestone(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        milestones = getattr(proposal, 'milestones', []) or []
+        milestone = {
+            "id": uuid.uuid4().hex[:8],
+            "name": data.get("name", ""),
+            "date": data.get("date", ""),
+            "completed": False,
+        }
+        milestones.append(milestone)
+        proposal.milestones = milestones
+        proposal.save()
+        return jsonify(milestone), 201
+
+    @app.route("/api/tracker/<proposal_id>/milestone/<milestone_id>", methods=["PUT"])
+    def update_milestone(proposal_id, milestone_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        milestones = getattr(proposal, 'milestones', []) or []
+        for m in milestones:
+            if m["id"] == milestone_id:
+                if "name" in data:
+                    m["name"] = data["name"]
+                if "date" in data:
+                    m["date"] = data["date"]
+                if "completed" in data:
+                    m["completed"] = data["completed"]
+                break
+        else:
+            return jsonify({"error": "Milestone not found"}), 404
+
+        proposal.milestones = milestones
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/tracker/<proposal_id>/milestone/<milestone_id>", methods=["DELETE"])
+    def delete_milestone(proposal_id, milestone_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        milestones = getattr(proposal, 'milestones', []) or []
+        proposal.milestones = [m for m in milestones if m["id"] != milestone_id]
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/tracker/<proposal_id>/report", methods=["POST"])
+    def add_report(proposal_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        reports = getattr(proposal, 'reports', []) or []
+        report = {
+            "id": uuid.uuid4().hex[:8],
+            "date": data.get("date", datetime.now().strftime("%Y-%m-%d")),
+            "title": data.get("title", ""),
+            "content": data.get("content", ""),
+        }
+        reports.append(report)
+        proposal.reports = reports
+        proposal.save()
+        return jsonify(report), 201
+
+    @app.route("/api/tracker/<proposal_id>/report/<report_id>", methods=["PUT"])
+    def update_report(proposal_id, report_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json()
+        reports = getattr(proposal, 'reports', []) or []
+        for r in reports:
+            if r["id"] == report_id:
+                if "title" in data:
+                    r["title"] = data["title"]
+                if "date" in data:
+                    r["date"] = data["date"]
+                if "content" in data:
+                    r["content"] = data["content"]
+                break
+        else:
+            return jsonify({"error": "Report not found"}), 404
+
+        proposal.reports = reports
+        proposal.save()
+        return jsonify({"ok": True})
+
+    @app.route("/api/tracker/<proposal_id>/report/<report_id>", methods=["DELETE"])
+    def delete_report(proposal_id, report_id):
+        proposal = Proposal.load(proposal_id)
+        if not proposal:
+            return jsonify({"error": "Not found"}), 404
+
+        reports = getattr(proposal, 'reports', []) or []
+        proposal.reports = [r for r in reports if r["id"] != report_id]
+        proposal.save()
+        return jsonify({"ok": True})
 
     return app
 

@@ -39,6 +39,11 @@
                             <a class="hamburger-item" href="/">Switch Proposal</a>
                             <a class="hamburger-item" href="/new">New Proposal</a>
                             <button class="hamburger-item" onclick="openSaveAsModal(); closeHamburger()">Save As...</button>
+                            <button class="hamburger-item" onclick="openSaveAsTemplateModal(); closeHamburger()">Save as Template...</button>
+                            <hr class="hamburger-divider">
+                            <a class="hamburger-item" href="/templates">Templates</a>
+                            <hr class="hamburger-divider">
+                            <a class="hamburger-item" href="/tracker/{{ proposal.id }}">Project Tracker</a>
                             <hr class="hamburger-divider">
                             <button class="hamburger-item" onclick="exportProposal('{{ proposal.id }}', 'html'); closeHamburger()">Export HTML</button>
                             <button class="hamburger-item" onclick="exportProposal('{{ proposal.id }}', 'pdf'); closeHamburger()">Export PDF</button>
@@ -104,6 +109,54 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeSaveAsModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="saveProposalAs()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="save-as-template-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Save as Template</h2>
+                <button class="btn-icon" onclick="closeSaveAsTemplateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="template-name">Template Name</label>
+                    <input type="text" id="template-name" placeholder="e.g., Forest Conservation Proposal" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:14px;">
+                </div>
+                <div class="form-group">
+                    <label for="template-category">Category (optional)</label>
+                    <input type="text" id="template-category" placeholder="e.g., Conservation, Research, General" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:14px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSaveAsTemplateModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProposalAsTemplate()">Save Template</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="budget-import-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import Budget from Excel</h2>
+                <button class="btn-icon" onclick="closeBudgetImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:12px;color:var(--text-muted);font-size:13px;">
+                    Upload an Excel file with columns: <strong>Task, Item, Cost/Unit, Units</strong>
+                </p>
+                <p style="margin-bottom:12px;font-size:13px;">
+                    <a href="/api/budget-template" download style="color:var(--primary);">Download template</a> to get started.
+                </p>
+                <div class="form-group">
+                    <label for="budget-import-file">Select file</label>
+                    <input type="file" id="budget-import-file" accept=".xlsx,.xls">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeBudgetImportModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="uploadBudgetExcel()">Import</button>
             </div>
         </div>
     </div>

@@ -335,6 +335,44 @@ function closeSaveAsModal() {
     document.getElementById('save-as-modal').classList.add('hidden');
 }
 
+function openSaveAsTemplateModal() {
+    const modal = document.getElementById('save-as-template-modal');
+    const nameInput = document.getElementById('template-name');
+    const titleEl = document.getElementById('proposal-title');
+    nameInput.value = titleEl ? (titleEl.textContent || '') : '';
+    modal.classList.remove('hidden');
+    nameInput.focus();
+    nameInput.select();
+}
+
+function closeSaveAsTemplateModal() {
+    document.getElementById('save-as-template-modal').classList.add('hidden');
+}
+
+function saveProposalAsTemplate() {
+    const name = document.getElementById('template-name').value.trim();
+    const category = document.getElementById('template-category').value.trim();
+    if (!name) {
+        alert('Please enter a template name.');
+        return;
+    }
+    const proposalId = window.location.pathname.split('/').pop();
+    fetch('/api/proposal/' + proposalId + '/save-as-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template_name: name, template_category: category })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.id) {
+            closeSaveAsTemplateModal();
+            alert('Template saved!');
+        } else {
+            alert(data.error || 'Failed to save template.');
+        }
+    });
+}
+
 function saveProposalAs() {
     const title = document.getElementById('save-as-title').value.trim();
     if (!title) {

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propongo 2 - Templates</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div style="max-width: 900px; margin: 0 auto; padding: 40px 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;">
+            <div>
+                <h1 style="font-size:28px;">Templates</h1>
+                <p style="color:#64748b;">Save and reuse proposal structures</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <a href="/" class="btn btn-secondary">Back to Proposals</a>
+            </div>
+        </div>
+
+        {% if templates %}
+        <div class="proposals-grid">
+            {% for t in templates %}
+            <div class="proposal-card">
+                <h3>{{ t.template_name or t.title }}</h3>
+                {% if t.template_category %}
+                <p class="client-name">{{ t.template_category }}</p>
+                {% else %}
+                <p class="client-name">{{ t.title }}</p>
+                {% endif %}
+                <p class="updated">Updated: {{ t.updated_at[:10] if t.updated_at else "Never" }}</p>
+                <div class="card-actions">
+                    <a href="/templates/new-from/{{ t.id }}" class="btn btn-primary btn-sm">Use Template</a>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTemplate('{{ t.id }}')">Delete</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>No templates yet</h2>
+            <p>Save a proposal as a template from the editor's menu.</p>
+            <a href="/" class="btn btn-primary">Back to Proposals</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function deleteTemplate(id) {
+            if (!confirm('Delete this template?')) return;
+            fetch('/api/template/' + id, { method: 'DELETE' })
+                .then(() => window.location.reload());
+        }
+    </script>
+</body>
+</html>

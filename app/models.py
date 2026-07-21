@@ -40,11 +40,13 @@ import uuid
 
 
 PROPOSALS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "proposals")
+TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "templates")
 
 
 def ensure_dirs() -> None:
     """Ensure data directories exist."""
     os.makedirs(PROPOSALS_DIR, exist_ok=True)
+    os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
 
 @dataclass
@@ -72,6 +74,13 @@ class Proposal:
     timeline_show_budget: bool = False
     custom_sections: list = field(default_factory=list)
 
+    is_template: bool = False
+    template_name: str = ""
+    template_category: str = ""
+
+    milestones: list = field(default_factory=list)
+    reports: list = field(default_factory=list)
+
     def to_dict(self) -> dict:
         return asdict(self)
 
@@ -82,7 +91,8 @@ class Proposal:
     def save(self):
         ensure_dirs()
         self.updated_at = datetime.now().isoformat()
-        filepath = os.path.join(PROPOSALS_DIR, f"{self.id}.json")
+        target_dir = TEMPLATES_DIR if self.is_template else PROPOSALS_DIR
+        filepath = os.path.join(target_dir, f"{self.id}.json")
         tmp = filepath + ".tmp"
         with open(tmp, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
@@ -90,8 +100,9 @@ class Proposal:
         os.replace(tmp, filepath)
 
     @classmethod
-    def load(cls, proposal_id: str) -> Optional["Proposal"]:
-        filepath = os.path.join(PROPOSALS_DIR, f"{proposal_id}.json")
+    def load(cls, proposal_id: str, is_template: bool = False) -> Optional["Proposal"]:
+        target_dir = TEMPLATES_DIR if is_template else PROPOSALS_DIR
+        filepath = os.path.join(target_dir, f"{proposal_id}.json")
         if not os.path.exists(filepath):
             return None
         try:
@@ -120,8 +131,29 @@ class Proposal:
         return sorted(proposals, key=lambda x: x["updated_at"], reverse=True)
 
     @classmethod
-    def delete(cls, proposal_id: str) -> bool:
-        filepath = os.path.join(PROPOSALS_DIR, f"{proposal_id}.json")
+    def list_templates(cls) -> list:
+        ensure_dirs()
+        templates = []
+        for filename in sorted(os.listdir(TEMPLATES_DIR)):
+            if filename.endswith(".json"):
+                try:
+                    with open(os.path.join(TEMPLATES_DIR, filename), "r") as f:
+                        data = json.load(f)
+                        templates.append({
+                            "id": data.get("id", filename.replace(".json", "")),
+                            "title": data.get("title", "Untitled"),
+                            "template_name": data.get("template_name", ""),
+                            "template_category": data.get("template_category", ""),
+                            "updated_at": data.get("updated_at", ""),
+                        })
+                except (json.JSONDecodeError, OSError):
+                    continue
+        return sorted(templates, key=lambda x: x["updated_at"], reverse=True)
+
+    @classmethod
+    def delete(cls, proposal_id: str, is_template: bool = False) -> bool:
+        target_dir = TEMPLATES_DIR if is_template else PROPOSALS_DIR
+        filepath = os.path.join(target_dir, f"{proposal_id}.json")
         if os.path.exists(filepath):
             os.remove(filepath)
             return True
