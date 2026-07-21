@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Report: {{ proposal.title }}</title>
+    <style>
+        @page { size: portrait; margin: 2cm; @bottom-center { content: counter(page); } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+        }
+        .doc-header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #2563eb;
+        }
+        .doc-header h1 {
+            font-size: 22pt;
+            color: #1e3a5f;
+            margin-bottom: 6px;
+        }
+        .doc-header .client {
+            font-size: 12pt;
+            color: #666;
+        }
+        .doc-header .date {
+            font-size: 9pt;
+            color: #999;
+            margin-top: 4px;
+        }
+        h2 {
+            font-size: 14pt;
+            color: #1e3a5f;
+            margin: 24px 0 10px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #ddd;
+        }
+        h3 {
+            font-size: 11pt;
+            color: #333;
+            margin: 14px 0 6px 0;
+        }
+        p { margin-bottom: 8px; }
+        .dashboard {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .dash-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .dash-value {
+            font-size: 22pt;
+            font-weight: 700;
+            color: #2563eb;
+        }
+        .dash-label {
+            font-size: 8pt;
+            color: #888;
+            margin-top: 2px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 5px 8px;
+            text-align: left;
+            font-size: 9pt;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+        td.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        tr.subtotal td {
+            font-weight: 600;
+            background: #f5f5f5;
+        }
+        tr.total td {
+            font-weight: 700;
+            border-top: 2px solid #333;
+        }
+        .task-block {
+            margin-bottom: 16px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+        }
+        .task-block h3 { margin-top: 0; }
+        .task-meta { font-size: 9pt; color: #666; margin-bottom: 6px; }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 8pt;
+            font-weight: 600;
+        }
+        .status-not_started { background: #e2e8f0; color: #475569; }
+        .status-in_progress { background: #dbeafe; color: #1d4ed8; }
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-delayed { background: #fef3c7; color: #92400e; }
+        .milestone-item {
+            padding: 4px 0;
+            font-size: 10pt;
+        }
+        .milestone-check { margin-right: 6px; }
+        .report-block {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .report-date { font-size: 8pt; color: #999; }
+        .report-content { font-size: 10pt; margin-top: 4px; }
+        .footer {
+            margin-top: 32px;
+            padding-top: 12px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 8pt;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="doc-header">
+        <h1>{{ proposal.title or "Project Report" }}</h1>
+        {% if proposal.client_name %}
+        <div class="client">{{ proposal.client_name }}{% if proposal.subtitle %} &middot; {{ proposal.subtitle }}{% endif %}</div>
+        {% endif %}
+        <div class="date">Generated: {{ proposal.updated_at[:10] if proposal.updated_at else "" }}</div>
+    </div>
+
+    <div class="dashboard">
+        <div class="dash-item">
+            <div class="dash-value">{{ overall_pct }}%</div>
+            <div class="dash-label">Tasks Completed</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-value">{{ tasks|length }}</div>
+            <div class="dash-label">Total Tasks</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-value">${{ total_with_indirect|currency }}</div>
+            <div class="dash-label">Budget</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-value">{{ milestones|length }}</div>
+            <div class="dash-label">Milestones</div>
+        </div>
+    </div>
+
+    <h2>Tasks</h2>
+    {% for task in tasks %}
+    <div class="task-block">
+        <h3>{{ task.name }}</h3>
+        <div class="task-meta">
+            Status: <span class="status-badge status-{{ task.get('status', 'not_started') }}">
+                {% if task.get('status') == 'completed' %}Completed
+                {% elif task.get('status') == 'in_progress' %}In Progress
+                {% elif task.get('status') == 'delayed' %}Delayed
+                {% else %}Not Started{% endif %}
+            </span>
+            &nbsp;&middot;&nbsp; Progress: {{ task.get('progress_pct', 0) }}%
+            {% if task.get('actual_start') %} &nbsp;&middot;&nbsp; Start: {{ task.get('actual_start') }}{% endif %}
+            {% if task.get('actual_end') %} &nbsp;&middot;&nbsp; End: {{ task.get('actual_end') }}{% endif %}
+        </div>
+        {% if task.get('notes') %}
+        <p style="font-size:9pt;color:#555;margin-top:6px;">{{ task.get('notes', '') }}</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <h2>Budget Tracking</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Item</th>
+                <th class="num">Planned</th>
+                <th class="num">Actual</th>
+                <th class="num">Variance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+                {% if task.id in task_budgets %}
+                <tr class="subtotal">
+                    <td colspan="2">{{ task.name }}</td>
+                    <td class="num">${{ task_budgets[task.id].subtotal|currency }}</td>
+                    <td class="num">${{ task_budgets[task.id].actual_total|currency }}</td>
+                    <td class="num">${{ (task_budgets[task.id].actual_total - task_budgets[task.id].subtotal)|currency }}</td>
+                </tr>
+                {% for item in task_budgets[task.id]["items"] %}
+                <tr>
+                    <td></td>
+                    <td>{{ item.name }}</td>
+                    <td class="num">${{ (item.cost_per_unit * item.units)|currency }}</td>
+                    <td class="num">${{ item.get('actual_cost', 0)|currency }}</td>
+                    <td class="num">${{ (item.get('actual_cost', 0) - item.cost_per_unit * item.units)|currency }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            {% endfor %}
+            <tr class="total">
+                <td colspan="2">Total</td>
+                <td class="num">${{ total_with_indirect|currency }}</td>
+                <td class="num">${{ (total_actual + indirect_amount)|currency }}</td>
+                <td class="num"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if milestones %}
+    <h2>Milestones</h2>
+    {% for m in milestones %}
+    <div class="milestone-item">
+        <span class="milestone-check">{% if m.completed %}&#9745;{% else %}&#9744;{% endif %}</span>
+        {{ m.name }}{% if m.date %} <span style="color:#888;font-size:9pt;">({{ m.date }})</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if reports %}
+    <h2>Reports</h2>
+    {% for r in reports|reverse %}
+    <div class="report-block">
+        <h3>{{ r.title }} <span class="report-date">{{ r.date }}</span></h3>
+        {% if r.content %}
+        <div class="report-content">{{ r.content }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="footer">
+        <span>{{ proposal.title or "Project Report" }}</span>
+    </div>
+</body>
+</html>

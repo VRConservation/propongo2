@@ -216,6 +216,8 @@ function exportProposal(proposalId, format) {
         window.open('/export/pdf/' + proposalId + t, '_blank');
     } else if (format === 'html') {
         window.open('/export/html/' + proposalId + t, '_blank');
+    } else if (format === 'docx') {
+        window.open('/export/docx/' + proposalId + t, '_blank');
     }
 }
 

@@ -139,3 +139,14 @@ function deleteReport(proposalId, reportId) {
         if (card) card.remove();
     });
 }
+
+function exportTracker(proposalId, format) {
+    const t = '?t=' + Date.now();
+    if (format === 'pdf') {
+        window.open('/export/tracker/pdf/' + proposalId + t, '_blank');
+    } else if (format === 'html') {
+        window.open('/export/tracker/html/' + proposalId + t, '_blank');
+    } else if (format === 'docx') {
+        window.open('/export/tracker/docx/' + proposalId + t, '_blank');
+    }
+}

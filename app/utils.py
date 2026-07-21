@@ -201,3 +201,57 @@ def build_export_context(proposal) -> Dict[str, Any]:
         "timeline_total_months": timeline_total_months,
         "all_rows": all_rows,
     }
+
+
+def build_tracker_export_context(proposal) -> Dict[str, Any]:
+    """Build context dictionary for tracker export templates.
+
+    Args:
+        proposal: Proposal object
+
+    Returns:
+        dict: Context dictionary with all necessary template variables
+    """
+    indirect_percent = getattr(proposal, 'indirect_percent', 0) or 0
+    indirect_amount = proposal.total_budget * (indirect_percent / 100)
+    total_with_indirect = proposal.total_budget + indirect_amount
+
+    timings = proposal.budget_item_timings or {}
+    task_budgets = {}
+    for task in proposal.tasks:
+        items = [b for b in proposal.budget_items if b.get("task_id") == task["id"]]
+        for item in items:
+            t = timings.get(item.get("id", ""), {})
+            if t:
+                item["actual_cost"] = t.get("actual_cost", 0)
+        subtotal = sum(i.get("cost_per_unit", 0) * i.get("units", 0) for i in items)
+        actual_total = sum(i.get("actual_cost", 0) for i in items)
+        task_budgets[task["id"]] = {
+            "task": task,
+            "items": items,
+            "subtotal": subtotal,
+            "actual_total": actual_total,
+        }
+
+    total_actual = sum(tb["actual_total"] for tb in task_budgets.values())
+
+    milestones = getattr(proposal, 'milestones', []) or []
+    reports = getattr(proposal, 'reports', []) or []
+
+    completed_tasks = sum(1 for t in proposal.tasks if t.get("status") == "completed")
+    total_tasks = len(proposal.tasks)
+    overall_pct = round(completed_tasks / total_tasks * 100) if total_tasks else 0
+
+    return {
+        "proposal": proposal,
+        "tasks": proposal.tasks,
+        "task_budgets": task_budgets,
+        "total_budget": proposal.total_budget,
+        "indirect_percent": indirect_percent,
+        "indirect_amount": indirect_amount,
+        "total_with_indirect": total_with_indirect,
+        "total_actual": total_actual,
+        "milestones": milestones,
+        "reports": reports,
+        "overall_pct": overall_pct,
+    }

@@ -61,7 +61,12 @@
                 <h1>{{ proposal.title }}</h1>
                 <p style="color:var(--text-muted);font-size:13px;">{{ proposal.client_name }}{% if proposal.subtitle %} &middot; {{ proposal.subtitle }}{% endif %}</p>
             </div>
-            <a href="/editor/{{ proposal.id }}" class="btn btn-secondary">Back to Editor</a>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-secondary btn-sm" onclick="exportTracker('{{ proposal.id }}', 'pdf')">Export PDF</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportTracker('{{ proposal.id }}', 'docx')">Export DOCX</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportTracker('{{ proposal.id }}', 'html')">Export HTML</button>
+                <a href="/editor/{{ proposal.id }}" class="btn btn-secondary">Back to Editor</a>
+            </div>
         </div>
 
         <div class="dashboard-cards">
